@@ -14,7 +14,8 @@ The main objective of our project is to identify the variables that are the most
 In this way, we use 3 different datasets :
 
 - "donnees" corresponds to data of 167 countries from the economist with the variables "Gscore" (which corresponds to the democracy level between 0 and 10) and the five variables quoted above.
-- 
+
+
 - "Tableau_complet_Gscore" which contains once again the variable Gscore with 21 other variables. The goal is to analyze these 21 variables and check if they are relevant to explain the Gscore.  
 
 - Third dataset.
