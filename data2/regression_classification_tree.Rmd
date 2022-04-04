@@ -1,0 +1,322 @@
+---
+title: "CART"
+author: "laurie dussere"
+date: "15/03/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r include=FALSE}
+library(ggplot2)
+library(corrplot)
+library("xlsx")
+library(FactoMineR)
+library(factoextra)
+library(cowplot)
+library("NbClust")
+library(readxl)
+library(missForest)
+library(glmnet)
+library(MASS)
+library(leaps)
+library(bestglm)
+library(logistf)
+
+
+library(rpart)
+library(dplyr)
+```
+
+
+```{r}
+data= read_excel("tableau_complet_Gscore.xlsx")
+
+data=transform(data,GPD =as.numeric(GPD),Gender_Gap =as.numeric(Gender_Gap),Ethnic =as.numeric(Ethnic),Linguistic =as.numeric(Linguistic),Religious =as.numeric(Religious),Science_and_Technology =as.numeric(Science_and_Technology),Culture=as.numeric(Culture),International_Peace_and_Security=as.numeric(International_Peace_and_Security),World_Order=as.numeric(World_Order),Planet_and_Climate=as.numeric(Planet_and_Climate),Prosperity_and_Equality=as.numeric(Prosperity_and_Equality),Health_and_Well_being=as.numeric(Health_and_Well_being),Emigrants=as.numeric(Emigrants),Suicide_Both_sexes=as.numeric(Suicide_Both_sexes),Suicide_Men=as.numeric(Suicide_Men),Suicide_Women=as.numeric(Suicide_Women),National_power=as.numeric(National_power),Population=as.numeric(Population),HDI=as.numeric(HDI),Corruption=as.numeric(Corruption),Terrorism=as.numeric(Terrorism),Poverty_pct=as.numeric(Poverty_pct),Gscore=as.numeric(Gscore))
+
+rownames(data)<-data$Countries
+data=data[,-1]
+data=data[,-14]
+
+data =data %>% filter(!is.na(Gscore))
+```
+
+
+```{r}
+#data=scale(data)
+```
+
+# Arbre sur l'ensemble du jeu de données
+
+## Arbre de régression
+
+```{r}
+data1=data
+data2=data
+```
+
+```{r}
+gscore.tree=rpart(Gscore~.,data=data1,method="anova")
+printcp(gscore.tree)
+plotcp(gscore.tree)
+summary(gscore.tree)
+```
+
+```{r}
+plot(gscore.tree, uniform=TRUE,
+   main="Regression Tree for Gscore ")
+text(gscore.tree, use.n=TRUE, all=TRUE, cex=.8)
+
+#dev.print(device = png, file = "arbre.png", width = 600)
+```
+La valeur optimale de cp est celle qui minimise l'erreur relative. On prend ici cp=0.053 #arbre avec le cp optimal
+
+```{r}
+arbre2 = prune(gscore.tree, cp = 0.053)
+rpart.plot(arbre2)
+```
+
+## Arbre de classification
+
+```{r}
+#on transforme d'abord le gscore en variable binaire
+print(data)
+
+data1$Gscore[data1$Gscore >= 5] <- 1
+data1$Gscore[data1$Gscore !=1] <- 0
+
+print(data1)
+```
+
+```{r}
+fit=rpart(Gscore~.,method="class", data=data1)
+
+printcp(fit) # display the results
+plotcp(fit) # visualize cross-validation results
+summary(fit) # detailed summary of splits
+
+# plot tree
+plot(fit, uniform=TRUE,
+   main="Classification Tree for Gscore")
+text(fit, use.n=TRUE, all=TRUE, cex=.8)
+```
+
+
+```{r}
+library(rpart.plot)
+tree_model = rpart(Gscore~., data = data1, method="class")
+#minsplit : nombre minimum d'observations qu'il doit y avoir dans un noeud pour faire un découpage
+#minbucket : 	the minimum number of observations in any terminal <leaf> node
+tree_model = rpart(Gscore~., data = data1, method="class",minsplit = 10, minbucket=3)
+prp(tree_model)
+```
+
+
+
+# Arbre sur des sous-modèles
+
+```{r}
+data2=subset(data2,Gscore>7.5 | Gscore <3.5) #pays les plus démocratiques
+print(data2)
+```
+
+```{r}
+gscore.tree=rpart(Gscore~.,data=data2,method="anova")
+printcp(gscore.tree)
+plotcp(gscore.tree)
+summary(gscore.tree)
+```
+
+```{r}
+plot(gscore.tree, uniform=TRUE,
+   main="Regression Tree for Gscore ")
+text(gscore.tree, use.n=TRUE, all=TRUE, cex=.8)
+
+#dev.print(device = png, file = "arbre.png", width = 600)
+```
+## Arbre de classification
+
+```{r}
+#on transforme d'abord le gscore en variable binaire
+
+data2$Gscore[data2$Gscore >= 5] <- 1
+data2$Gscore[data2$Gscore !=1] <- 0
+
+print(data2)
+```
+
+```{r}
+fit=rpart(Gscore~.,method="class", data=data2)
+
+printcp(fit) # display the results
+plotcp(fit) # visualize cross-validation results
+summary(fit) # detailed summary of splits
+
+# plot tree
+plot(fit, uniform=TRUE,
+   main="Classification Tree for Gscore")
+text(fit, use.n=TRUE, all=TRUE, cex=.8)
+```
+
+
+```{r}
+library(rpart.plot)
+tree_model = rpart(Gscore~., data = data2, method="class")
+#minsplit : nombre minimum d'observations qu'il doit y avoir dans un noeud pour faire un découpage
+#minbucket : 	the minimum number of observations in any terminal <leaf> node
+tree_model = rpart(Gscore~., data = data2, method="class",minsplit = 10, minbucket=3)
+prp(tree_model)
+```
+
+# Arbre pour la prédiction
+
+## Arbre de regression
+
+Création de l'échantillon d'apprentissage
+
+```{r}
+#Création d’un dataset d’apprentissage et d’un dataset de validation
+data=as.data.frame(data)
+nb_lignes <- floor((nrow(data)*0.75)) #Nombre de lignes de l’échantillon d’apprentissage : 75% du dataset
+data <- data[sample(nrow(data)), ] #Ajout de numéros de lignes
+data.train <- data[1:nb_lignes, ] #Echantillon d’apprentissage
+data.test <- data[(nb_lignes+1):nrow(data), ] #Echantillon de test
+```
+
+```{r}
+gscore.tree=rpart(Gscore~.,data=data.train,method="anova")
+printcp(gscore.tree)
+plotcp(gscore.tree)
+summary(gscore.tree)
+```
+
+```{r}
+plot(gscore.tree, uniform=TRUE,
+   main="Regression Tree for Gscore ")
+text(gscore.tree, use.n=TRUE, all=TRUE, cex=.8)
+
+dev.print(device = png, file = "arbre3.png", width = 600)
+```
+La variable qui permet de mieux expliquer le niveau démocratique d'un pays est la culture.
+comment on lit ces arbres ?
+
+
+A chaque fois qu'on fait tourner l'algo, on n'a pas toujours le même arbre, cela est du au fait que l'échantillon d'apprentissage n'est pas toujours le même. Cependant, on peut voir que des variables reviennent à plusieurs reprises, notamment Culture, HDI, Gender_Gap, World_Order et Health and Well_being.
+
+
+
+```{r}
+gscore.tree_opt <- prune(gscore.tree,cp=gscore.tree$cptable[which.min(gscore.tree$cptable[,4]),1])
+```
+
+```{r}
+#prp(gscore.tree_opt,extra=1)
+
+```
+## Validation
+
+```{r}
+gscore.test_predict<-predict(gscore.tree_opt,newdata=data.test)
+```
+
+```{r}
+#on affiche les valeurs prédites
+print(gscore.test_predict)
+```
+Les prédictions ne sont pas très bonnes.
+
+## Arbre de classification
+
+```{r}
+data= read_excel("tableau_complet_Gscore.xlsx")
+
+data=transform(data,GPD =as.numeric(GPD),Gender_Gap =as.numeric(Gender_Gap),Ethnic =as.numeric(Ethnic),Linguistic =as.numeric(Linguistic),Religious =as.numeric(Religious),Science_and_Technology =as.numeric(Science_and_Technology),Culture=as.numeric(Culture),International_Peace_and_Security=as.numeric(International_Peace_and_Security),World_Order=as.numeric(World_Order),Planet_and_Climate=as.numeric(Planet_and_Climate),Prosperity_and_Equality=as.numeric(Prosperity_and_Equality),Health_and_Well_being=as.numeric(Health_and_Well_being),Emigrants=as.numeric(Emigrants),Suicide_Both_sexes=as.numeric(Suicide_Both_sexes),Suicide_Men=as.numeric(Suicide_Men),Suicide_Women=as.numeric(Suicide_Women),National_power=as.numeric(National_power),Population=as.numeric(Population),HDI=as.numeric(HDI),Corruption=as.numeric(Corruption),Terrorism=as.numeric(Terrorism),Poverty_pct=as.numeric(Poverty_pct),Gscore=as.numeric(Gscore))
+
+rownames(data)<-data$Countries
+data=data[,-1]
+data=data[,-14]
+
+data =data %>% filter(!is.na(Gscore))
+```
+
+
+```{r}
+#on transforme d'abord le gscore en variable binaire
+print(data)
+
+data$Gscore[data$Gscore >= 5] <- 1
+data$Gscore[data$Gscore !=1] <- 0
+
+print(data)
+```
+
+
+
+```{r}
+#Création d’un dataset d’apprentissage et d’un dataset de validation
+
+data=as.data.frame(data)
+nb_lignes <- floor((nrow(data)*0.75)) #Nombre de lignes de l’échantillon d’apprentissage : 75% du dataset
+data <- data[sample(nrow(data)), ] #Ajout de numéros de lignes
+data.train <- data[1:nb_lignes, ] #Echantillon d’apprentissage
+data.test <- data[(nb_lignes+1):nrow(data), ] #Echantillon de test
+head(data.train)
+head(data.test)
+```
+
+
+```{r}
+fit=rpart(Gscore~.,method="class", data=data.train)
+
+printcp(fit) # display the results
+plotcp(fit) # visualize cross-validation results
+summary(fit) # detailed summary of splits
+
+# plot tree
+plot(fit, uniform=TRUE,
+   main="Classification Tree for Gscore")
+text(fit, use.n=TRUE, all=TRUE, cex=.8)
+```
+
+
+```{r}
+library(rpart.plot)
+tree_model = rpart(Gscore~., data = data.train, method="class", minsplit = 10, minbucket=3)
+prp(tree_model,main="classification tree for gscore")
+```
+```{r}
+gscore.Tree_Opt <- prune(fit,cp=fit$cptable[which.min(fit$cptable[,4]),1])
+```
+
+```{r}
+#prp(gscore.Tree_Opt,extra=1)
+```
+
+
+```{r}
+gscore.test_Predict<-predict(gscore.Tree_Opt,newdata=data.test, type="class")
+print(gscore.test_Predict)
+```
+
+
+```{r}
+library(yardstick)
+library(ggplot2)
+
+set.seed(123)
+truth_predicted <- data.frame(
+  obs = data.test[,"Gscore"],
+  pred = gscore.test_Predict
+)
+truth_predicted$obs <- as.factor(truth_predicted$obs)
+truth_predicted$pred <- as.factor(truth_predicted$pred)
+
+cm <- conf_mat(truth_predicted, obs, pred)
+
+autoplot(cm, type = "heatmap") +
+  scale_fill_gradient(low = "pink", high = "cyan")
+```
+
