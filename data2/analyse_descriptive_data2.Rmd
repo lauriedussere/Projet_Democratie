@@ -1,8 +1,10 @@
 ---
-title: "analyse_descriptive_data2"
+title: "descriptif_jeu_donnees2"
 author: "laurie dussere"
-date: "29/03/2022"
-output: pdf_document
+date: "07/02/2022"
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -42,7 +44,6 @@ summary(data2)
 head(data2)
 class(data2)
 ```
-
 
 ```{r}
 class(data2)
@@ -109,7 +110,6 @@ M=cor(data2[,-14]) #corrplot en supprimant la moyenne des suicides
 corrplot.mixed(M,upper="ellipse",tl.pos="lt")
 #method="ellipse",type="upper"
 ```
-
 Très forte corrélation entre Suicide_Men et Suicide_Both (0.93). Un peu moins forte entre Suicide Women et Both (0.8)
 
 Forte corrélation positive entre :
@@ -122,4 +122,92 @@ L'étude des corrélations entre les suicides ne me semble pas apporter quelque 
 
 
 
+```{r}
+#res.acp <- PCA(data2[,-14],scale.unit=TRUE,ncp=6, graph=FALSE)
+res.acp <- PCA(data2,scale.unit=TRUE,ncp=6, graph=FALSE)
+
+cat("\nPourcentages d’inerties cumulées des axes principaux :\n")
+print(res.acp$eig[,"cumulative percentage of variance"]) 
+
+fviz_screeplot(res.acp, addlabels = TRUE, ylim = c(0, 80), main="Pourcentages d’inerties")
+```
+On garde 8 dimensions pour avoir un taux d'inertie supérieur à 80,3 %
+
+```{r}
+#autre représentation
+res.acp=PCA(data2[,-14], scale.unit= T, ncp=10,graph=F)
+barplot(res.acp$eig[,"cumulative percentage of variance"],main="Pourcentages d'inerties cumulées", col="lightgreen")
+abline(a=80, b=0, col="red", lty=2, lwd=3)
+```
+
+```{r fig.height=18}
+library(factoextra);library(cowplot)
+f1=fviz_contrib(res.acp, choice="var", axes=1, color="black", fill="lightgray")
+f2=fviz_contrib(res.acp, choice="var", axes=2, color="black", fill="lightgray")
+f3=fviz_contrib(res.acp, choice="var", axes=3, color="black", fill="lightgray")
+f4=fviz_contrib(res.acp, choice="var", axes=4, color="black", fill="lightgray")
+plot_grid(f1,f2,f3,f4)
+```
+Commentaires : 
+
+Les variables qui contribuent le plus à la première dimensions sont : HDI Corruption Culture Science et technology et d'autres encore. En fait, une grande majorité des variables contribuent à la dimension 1.
+
+Les composantes dans dim 2 et dim 3 sont les mêmes. Ce qui les différentie c'est l'importance de leur contribution. Suicide,M and W participent plus à la dim 2 et National power, Pop et Emigrants à dim 3
+
+dim4 peut sembler logique avec ethnic linguistic et religious ensemble.
+
+dim 5 : Religious, properity and equality, GPD, terrorism
+
+Dim 1 : developpement humain et technologique ?
+Dim 2 : suicide
+Dim 3 : peuple, identité ?
+Dim 4 appartenance à un pays et ce qui va avec (culture)
+
+
+
+```{r}
+f12=fviz_pca_var(res.acp, axes=c(1,2), col.var = "cos2",gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07")) 
+plot(f12)
+```
+
+
+```{r}
+
+f13=fviz_pca_var(res.acp, axes=c(1,3), col.var = "cos2",gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07")) 
+plot(f13)
+```
+
+```{r}
+f23=fviz_pca_var(res.acp, axes=c(2,3), col.var = "cos2",gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07")) 
+plot(f23)
+```
+
+```{r fig.height=9}
+plot(res.acp,choix="ind", label="none", habillage = 1, axes = c(1,2))
+```
+
+
+```{r fig.height=9}
+fviz_pca_ind(res.acp, col.ind = "cos2", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE # Avoid text overlapping (slow if many points)
+             )
+```
+
+
+
+## Clustering
+
+```{r}
+#Kmeans
+fviz_nbclust(data2, FUNcluster =kmeans, method = "silhouette")
+```
+
+3 groupes avec kmeans
+
+
+```{r fig.height=9}
+resKM <- kmeans(data2, centers=3,nstart=20)
+fviz_cluster(resKM, data2, repel=TRUE) #l'argument repel évite le chevauchement des textes
+```
 
