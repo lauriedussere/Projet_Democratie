@@ -18,7 +18,7 @@ In this way, we use 3 different datasets :
 
 - "Tableau_complet_Gscore" which contains once again the variable Gscore with 21 other variables. The goal is to analyze these 21 variables and check if they are relevant to explain the Gscore.  
 
-- Third dataset.
+- a third dataset that we built thanks to this website : https://ourworldindata.org/
 
 
 
