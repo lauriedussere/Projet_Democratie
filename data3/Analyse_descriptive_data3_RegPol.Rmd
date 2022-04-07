@@ -1,0 +1,133 @@
+---
+title: "Analyse_descriptive_data3_RegPol"
+author: "manon santrisse"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(corrplot)
+#library("xlsx")
+library(readxl)
+library(FactoMineR)
+library(factoextra)
+library(cowplot)
+library("NbClust")
+library(missForest)
+```
+
+
+```{r}
+data3=read.csv("data3-modif.csv",header=TRUE,sep=";",dec=",")
+rownames(data3)<-data3$Entity
+data3=data3[,-1]
+head(data3)
+```
+
+
+```{r}
+data3 =data3 %>% filter(!is.na(Regime_politique))
+print(data3)
+``` 
+
+```{r}
+#On fait un missing tree pour compléter les données manquantes et pas être embétés ensuite
+
+data3=missForest(data3)$ximp #on fait un miss forest pour compléter les données manquantes et ne pas avoir de problèmes de NA dans la suite de l'analyse.
+
+```
+
+```{r}
+head(data3)
+summary(data3)
+```
+
+```{r}
+Regime_politique=data3$Regime_politique
+Age_democratie=data3$Age_democratie
+Droit_de_lHomme=data3$Droit_de_lHomme
+Liberte_economique=data3$Liberte_economique
+Inegalite_des_genres=data3$Inegalite_des_genres
+Proportion_denfants_harceles=data3$Proportion_denfants_harceles
+Corruption=data3$Corruption
+Taux_alphabetisation=data3$Taux_alphabetisation
+Annes_detudes=data3$Annes_detudes
+Espérance_vie=data3$Espérance_vie
+Budget_militaire_from_GPD=data3$Budget_militaire_from_GPD
+Sous_alimentation=data3$Sous_alimentation
+Acces_Internet_pers=data3$Acces_Internet_pers
+Acces_electricite_pers=data3$Acces_electricite_pers
+Pop_urban=data3$Pop_urban 
+Pop_rural=data3$Pop_rural
+```
+
+
+##Analyse descritpive
+#Unidimensionnel
+
+```{r}
+data3=scale(data3)
+boxplot(data3)
+```
+Remarque : la médiane de Regime pol est très très haute
+```{r}  
+par(mfrow=c(3,2))
+class(Regime_politique)
+hist(Regime_politique,breaks = "FD",freq =TRUE, main = "Regime_politique",xlab = "Regime_politique")
+hist(Age_democratie,main="Age_democratie", xlab="Age_democratie")
+hist(Droit_de_lHomme,breaks = "FD",freq=TRUE, main ="Droit_de_lHomme",xlab="Droit_de_lHomme")
+hist(Liberte_economique,breaks = "FD",freq=TRUE, main ="Liberte_economique", xlab="Liberte_economique")
+hist(Inegalite_des_genres,breaks = "FD",freq=TRUE, main ="Inegalite_des_genres ",xlab="Inegalite_des_genres")
+hist(Proportion_denfants_harceles,breaks = "FD",freq=TRUE, main ="Proportion_denfants_harceles",xlab="Proportion_denfants_harceles")
+
+
+```
+Regime politique : trou important au milieu
+Age demo : beaucoup de pays qui sont des democratie depuis peu de temps
+```{r}
+par(mfrow=c(3,2))
+hist(Corruption,breaks = "FD",freq=TRUE, main ="Corruption", xlab="Corruption")
+hist(Taux_alphabetisation,breaks = "FD",freq=TRUE, main ="Taux_alphabetisation", xlab="Taux_alphabetisation")
+hist(Annes_detudes,breaks = "FD",freq=TRUE, main ="Annes_detudes ",xlab="Annes_detudes")
+hist(Espérance_vie,breaks = "FD",freq=TRUE, main ="Espérance_vie", xlab="Espérance_vie")
+hist(Budget_militaire_from_GPD,breaks = "FD",freq=TRUE, main ="Budget_militaire_from_GPD") 
+hist(Sous_alimentation,breaks = "FD",freq=TRUE, main ="Sous_alimentation")
+
+
+```
+Taux d'alphabétisation : beaucoup de pays ont un fort taux
+```{r}
+par(mfrow=c(2,2))
+hist(Acces_Internet_pers,breaks = "FD",freq =TRUE, main = "Acces_Internet_pers",xlab = "Acces_Internet_pers")
+hist(Acces_electricite_pers,main="Acces_electricite_pers", xlab="Acces_electricite_pers")
+hist(Pop_urban,breaks = "FD",freq=TRUE, main ="Pop_urban",xlab="Pop_urban")
+hist(Pop_rural,breaks = "FD",freq=TRUE, main ="Pop_rural", xlab="Pop_rural")
+
+```
+
+
+## ANALYSE BIDIMENSIONNELLE
+```{r fig.height=10}
+M=cor(data3)
+corrplot.mixed(M,upper="ellipse",tl.pos="lt")
+```
+Le regime politique est bien corrélé positivement avec age democratie, Droit de l'Homme et corruption.
+
+Considéré comme fort au dessus de 0.70
+
+Forte corrélation positive entre :
+-hyuman right et corruption
+-liberte eco et corruption
+-Corruption et HDI /acces internet
+-taux d'alpha et HDI / annees détudes /espérance de vie /internet / electricité
+-HDI etannees d'études /espérance de vie/  internet / electricité
+-annees d'études et espérance de vie / acces internet / Electicité
+-espérance de vie et internet / electicité
+-Internet et electricité
+-Pop urban et rural
+
+Forte corrélation négative:
+-inegalite des genre et corruption /taux alphab / HDI: annes détudes / esperance de vie / internet
+-HDI et sous alimentation
+-sous alimentation et / espérance de vie /Internet /electricité
