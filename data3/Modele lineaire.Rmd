@@ -1,0 +1,139 @@
+---
+title: "Modeles linéaires data3"
+author: "manon santrisse"
+date: "27/02/2022"
+output: html_document
+---
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(corrplot)
+library(readxl)
+library(FactoMineR)
+library(factoextra)
+library(cowplot)
+library("NbClust")
+library(missForest)
+library(leaps)
+library(MASS)
+```
+
+
+
+```{r}
+data3=read.csv("data3_Gscore.csv",header=TRUE,sep=";",dec=",")
+rownames(data3)<-data3$Entity
+data3=data3[,-1]
+head(data3)
+```
+```{r}
+#On fait un missing tree pour compléter les données manquantes et pas être embétés ensuite
+
+data3=missForest(data3)$ximp #on fait un miss forest pour compléter les données manquantes et ne pas avoir de problèmes de NA dans la suite de l'analyse.
+class(data3)
+```
+
+
+##Modele linéaire
+#Univariable
+
+```{r}
+reg.simple1=lm(Gscore~Droit_de_lHomme,data=data3)
+summary(reg.simple1)
+```
+R²=0.48 c'est assez bas
+
+p-val <2.2e-16 donc on rejette H0 cad qu'on ne peut pas enlever la variable Droit de l'Homme
+
+Les modeles simples testés pour : 
+Liberte eco (R²=0.21)
+Inegalite des genre (R²=0.24)
+enfants harcelés (R²=0.04)
+corruption (R²=0.39)
+Taux alphab (R²=0.08)
+HDI (0.22)
+Annnees d'études (0.20)
+avec toujours une p-val inférieure à 0.05
+
+```{r}
+scatter_plot <- ggplot(data3,aes(x=Gscore,y=Droit_de_lHomme)) + geom_point() + theme_minimal()
+scatter_plot + geom_smooth(method="lm", se=TRUE, col="skyblue3")
+```
+
+```{r}
+plot(reg.simple1,which=c(1,2))
+```
+
+```{r, eval=F}
+shapiro.test(reg.simple1$residuals) 
+```
+p-val=0.64>.05 donc on accpete H0 cad residus suivent une loi normale
+
+
+```{r}
+reg.simple2=lm(Gscore~Pop_urban,data=data3)
+summary(reg.simple2)
+```
+
+```{r}
+reg.simple2=lm(Gscore~Pop_rural,data=data3)
+summary(reg.simple2)
+```
+Tous les modèles linéaires univariables ont été testés. On a toujours des p val infériere à 0.05 sauf dans le cas de Poplation rurale et urbaine.
+
+#Modèle linéaire multiple
+
+```{r}
+reg.mult=lm(Gscore~.,data=data3)
+summary(reg.mult)
+```
+R²=0.7492 
+les p val de corruption,HDI et budget militaire sont inférieurs à 0.05 donc on rejette l'hypothse de nullité et on accepte pour les autres.
+
+```{r}
+plot(reg.mult,which=c(1,2))
+```
+
+
+````{r, eval=F}
+shapiro.test(reg.mult$residuals) 
+```
+p val = 0.559 >0.5 donc on accepte l'hypothese de normalite
+
+```{r}
+select<-regsubsets(Gscore~., data=data3 ,method="forward")
+res = summary(select)
+res
+
+plot(select,scale="bic")
+```
+On garde :
+Corruption
+HDI
+Budget militaire
+
+
+
+````{r}
+reg.mult.Bic <- lm(Gscore~Corruption+HDI+Budget_militaire_from_GPD,data=data3)
+summary(reg.mult.Bic)
+anova(reg.mult.Bic,reg.mult)
+```
+On accepte l'hypothese de sous modele car 0.36 > 0.05
+
+```{r}
+select_aic=stepAIC(lm(Gscore~., data=data3), trace=TRUE)
+```
+On garde les mêmes variables qu'avec le critere BIC droit de l'Homme et inégalité des genres
+
+
+````{r}
+reg.mult.Aic <- lm(Gscore ~ Droit_de_lHomme + Inegalite_des_genres + Corruption + HDI + Budget_militaire_from_GPD, data=data3)
+summary(reg.mult.Aic)
+anova(reg.mult.Aic,reg.mult)
+```
+p val= 0.7 > 0.5 donc on accepte le sous modele
+
+
