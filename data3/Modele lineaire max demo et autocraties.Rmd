@@ -1,0 +1,107 @@
+---
+title: "Modele lineaire avec max demo et autocraties"
+author: "Manon Santrisse"
+date: "15/03/2022"
+output: html_document
+---
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(corrplot)
+library(readxl)
+library(FactoMineR)
+library(factoextra)
+library(cowplot)
+library("NbClust")
+library(missForest)
+library(dplyr)
+```
+
+
+
+#Modèle linéaire avec les pays avec un Gscore au desssus 7.5 et en dessous de 3.5
+
+```{r}
+data3=read.csv("data3_Gscore.csv",header=TRUE,sep=";",dec=",")
+rownames(data3)=data3$Entity
+data3=data3[-1]
+head(data3)
+```
+
+On supprime les pays dont nous n'avons pas l'indice gscore
+
+
+
+#On garde au dessus de 7.5 et en dessous de 3.5
+```{r}
+data3=subset(data3,data3$Gscore>7.5 |data3$Gscore<3.5)
+head(data3)
+``` 
+#Miss Forest
+On complète les données manquantes
+```{r}
+data3=missForest(data3)$ximp 
+```
+
+#Modele linéaire
+
+
+```{r}
+reg.mult=lm(Gscore~.,data=data3)
+summary(reg.mult)
+
+```
+R²=0.89 très bien
+
+```{r}
+plot(reg.mult,which=c(1,2))
+```
+```{r, eval=F}
+shapiro.test(reg.mult$residuals) 
+```
+p-val=0.88 >0.05 donc on accepte l'hypothese de normalité
+
+#Selection de sous modèle
+
+```{r}
+select<-regsubsets(Gscore~., data=data3 ,method="forward")
+res = summary(select)
+res
+
+plot(select,scale="bic")
+```
+On garde :
+droit de l'homme
+corruption
+budget militaire %GPD 
+
+On retrouve presque les mêmes variables que quand on a étudié le dataset complet soit avec tout le Gscore. On a HDI remplacé par Droit de l'Homme
+
+```{r}
+reg.BIC=lm(Gscore~Droit_de_lHomme+Corruption+Budget_militaire_from_GPD, data=data3)
+summary(reg.BIC)
+anova(reg.BIC,reg.mult)
+``` 
+
+pval=0.6078>0.05 donc on accepte le sous modèle
+
+
+
+```{r}
+select_aic=stepAIC(lm(Gscore~., data=data3), trace=TRUE)
+```
+On garde les même variable qu'avec le critere BIC plus HDI et accès à internet. Dans le modele lineaire complet on avait inégalite des genres à la place de Accès à internet
+
+
+````{r}
+reg.Aic <- lm(Gscore ~ Droit_de_lHomme + Corruption + HDI + Budget_militaire_from_GPD + Acces_Internet_pers,data=data3)
+summary(reg.Aic)
+anova(reg.Aic,reg.mult)
+```
+pval=0.87 on accepte le sous modèle
