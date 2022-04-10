@@ -1,0 +1,135 @@
+---
+title: "Modele Regression logistique Gscore binaire"
+author: "Manon Santrisse"
+date: "31/03/2022"
+output: html_document
+---
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(corrplot)
+library(readxl)
+library(FactoMineR)
+library(factoextra)
+library(cowplot)
+library("NbClust")
+library(missForest)
+
+
+library(MASS)
+library(leaps)
+library(bestglm)
+library(ggfortify)
+library(gridExtra)
+```
+
+
+
+```{r}
+data3=read.csv("data3_Gscore.csv",header=TRUE,sep=";",dec=",")
+rownames(data3)<-data3$Entity
+data3=data3[,-1]
+data3 =data3 %>% filter(!is.na(Gscore))
+print(data3)
+```
+
+On supprime les pays dont nous n'avons pas l'indice Regime politique
+```{r}
+data3$Gscore[data3$Gscore >= 5] <- 1
+data3$Gscore[data3$Gscore != 1] <- 0
+head(data3)
+```
+
+```{r}
+#On fait un missing tree pour compléter les données manquantes et pas être embétés ensuite
+
+data3=missForest(data3)$ximp #on fait un miss forest pour compléter les données manquantes et ne pas avoir de problèmes de NA dans la suite de l'analyse.
+```
+
+
+
+
+
+# Regression logistique partie 1
+
+```{r}
+glm.Gscore= glm(Gscore ~ ., data=data3, family=binomial(link="logit"))
+summary(glm.Gscore)
+```
+
+le pseudo $R^2$ associé à ce modèle et commentez.
+
+```{r}
+pseudoR2 = (glm.Gscore$null.deviance - glm.Gscore$deviance)/glm.Gscore$null.deviance
+pseudoR2
+```
+
+pseudoR²=0.50 c'est pas trop mal
+
+Le modele constant est-il envisageable ?
+
+```{r}
+M0 = glm(Gscore ~ 1, data=data3, family=binomial(link="logit"))
+summary(M0)
+anova(M0,glm.Gscore,test="Chisq")
+```
+Avec Anova : p-valeur :1.006e-14 <0.05 donc on rejette Ho c'est à dire que le modele constant n'est pas adapté.
+
+
+```{r}
+exp(glm.Gscore$coefficients)
+```
+1.8=exp(teta1)ôbs=OR(x+1,x)
+où x est une valeur de Droit de l'Homme, donc si la variable Droit de l'Homme augmente de 1 on a 1.4 fois plus de chance d'avoir du une democratie.
+
+
+
+# Sélection de variables :
+#Critère AIC
+```{r}
+step(glm.Gscore,trace=FALSE,direction=c("backward"))
+
+```
+sous modele retenu :
+Gscore ~ Corruption + Annes_detudes + Espérance_vie + Budget_militaire_from_GPD + Acces_Internet_pers
+
+
+```{r}
+modselect_AIC = glm(Gscore ~ Corruption + Annees_detudes + Espérance_vie + Budget_militaire_from_GPD + Acces_Internet_pers, data=data3, family = binomial(link="logit"))
+summary(modselect_AIC)
+```
+
+```{r}
+pseudoR2 = (modselect_AIC$null.deviance - modselect_AIC$deviance)/modselect_AIC$null.deviance
+pseudoR2
+```
+
+```{r}
+anova(modselect_AIC,glm.Gscore,test="Chisq")
+``` 
+p-val =0.85 > 0.05 donc on accepte l'hypothese cad que le sous modele est accepté
+
+#Critère BIC
+```{r}
+step(glm.Gscore, trace=FALSE,direction="backward", k=log(nrow(data3)))
+
+```
+
+On garde les variables corruption, années d'études et budget militaire (même que AIC moins Espérance vie et acces internet)
+
+````{r}
+modselect_BIC=glm(formula = Gscore ~ Corruption +Annees_detudes+Budget_militaire_from_GPD, family = binomial(link = "logit"),  data = data3)
+summary(modselect_BIC)
+```
+
+```{r}
+pseudoR2 = (modselect_BIC$null.deviance - modselect_BIC$deviance)/modselect_BIC$null.deviance
+pseudoR2
+```
+
+```{r}
+anova(modselect_BIC,glm.Gscore,test="Chisq")
+```
+pval=0.61 on accepte le sous modele
