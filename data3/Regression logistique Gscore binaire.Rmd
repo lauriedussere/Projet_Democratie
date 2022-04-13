@@ -133,3 +133,90 @@ pseudoR2
 anova(modselect_BIC,glm.Gscore,test="Chisq")
 ```
 pval=0.61 on accepte le sous modele
+
+
+# Regression logistique partie 2
+Dans cette étude on ne conserve que les pays donc le Gscore au dessus de 7.5 et sous 3.5
+
+#supression de regime politique 2 
+
+```{r}
+data3=read.csv("data3_Gscore.csv",header=TRUE,sep=";",dec=",")
+rownames(data3)<-data3$Entity
+data3=data3[,-1]
+data3 =data3 %>% filter(!is.na(Gscore))
+data3=subset(data3,data3$Gscore>7.5 |data3$Gscore<3.5)
+data3$Gscore[data3$Gscore > 7.5] <- 1
+data3$Gscore[data3$Gscore != 1] <- 0
+data3=missForest(data3)$ximp
+head(data3)
+```
+
+
+
+```{r}
+glm.Gscore2= glm(Gscore ~ ., data=data3)
+summary(glm.Gscore2)
+```
+
+le pseudo $R^2$ associé à ce modèle et commentez.
+
+```{r}
+pseudoR2 = (glm.Gscore2$null.deviance - glm.Gscore2$deviance)/glm.Gscore2$null.deviance
+pseudoR2
+```
+$R^2$=0.83 c'est plutôt bon
+
+Le modele constant est-il envisageable ?
+
+```{r}
+ModConst = glm(Gscore ~ 1, data=data3, family=binomial(link="logit"))
+summary(ModConst)
+anova(ModConst,glm.Gscore2,test="Chisq")
+```
+p val =2.2-06 <0.05 donc on rejette H0 le modele n'est pas constant
+
+```{r}
+exp(glm.Gscore2$coefficients)
+```
+
+# Sélection de variables :
+#Critère AIC
+```{r}
+step(glm.Gscore2,trace=FALSE,direction=c("backward"))
+
+```
+sous modele retenu :
+Gscore ~ Droit_de_lHomme + Corruption + Espérance_vie + Budget_militaire_from_GPD + Acces_Internet_pers + Pop_urban + Pop_rural
+
+Si on compare au jeu de données divisé en supérieur et iférieur à 5, on droit de l'Homme et années d'études en moins mais on les populations en plus.
+
+```{r}
+modselect_AIC3 = glm(formula = Gscore ~ Droit_de_lHomme + Corruption + Espérance_vie + Budget_militaire_from_GPD + Acces_Internet_pers + Pop_urban + Pop_rural, family = binomial(link = "logit"), data = data3, control = list(maxit = 100, epsilon = 1))
+pseudoR2 = (modselect_AIC3$null.deviance - modselect_AIC3$deviance)/modselect_AIC3$null.deviance
+pseudoR2
+```
+
+Les paramètres de contrôle sont nécessaire ici car sinon l'algorithme ne converge pas.
+
+```{r}
+anova(modselect_AIC3,glm.Gscore2,test="Chisq")
+``` 
+p-val =2.2e-6 < 0.05 donc on rejète l'hypothese cad que le sous modele est rejeté
+
+#Critère BIC
+```{r}
+step(glm.Gscore2, trace=FALSE,direction="backward", k=log(nrow(data3)))
+
+```
+Gscore ~ Corruption + Budget_militaire_from_GPD + Pop_urban + Pop_rural
+En comparaison avec le critère BIC pour le jeu de données divisé en sup et inf de 5, on a les populations en plus et les années d'études en moins
+
+````{r}
+modselect_BIC3=glm(formula = Gscore ~ Corruption + Budget_militaire_from_GPD + Pop_urban + Pop_rural, family = binomial(link = "logit"), data = data3)
+pseudoR2 = (modselect_BIC3$null.deviance - modselect_BIC3$deviance)/modselect_BIC3$null.deviance
+pseudoR2
+anova(modselect_BIC3,glm.Gscore2,test="Chisq")
+```
+pval=2.2e-6 on rejette le sous modele
+
