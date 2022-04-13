@@ -216,3 +216,97 @@ anova(modselect_BIC,glm.Regime_pol2,test="Chisq")
 ```
 pval=0.74 on accepte le sous modele
 
+
+# Regression logistique partie 2
+Dans cette étude on ne conserve que les pays donc le regime politique est 0 et 3 pour étudier les extrême.
+On va laisser les indices 0 et remplacer 3 par 1 pour pouvoir faire un travail en regression logistique.
+
+#supression de regime politique 2 
+
+```{r}
+head(data3)
+
+```
+
+```{r}
+data3bis=data3[-17]
+head(data3bis)
+```
+
+#Rassemblement transformation de 3 en 1 en la variable Regime Pol 3
+```{r}
+#garder seulement 0 et 3
+data3bis=subset(data3bis, Regime_politique==0 | Regime_politique==3)
+head(data3bis)
+```
+
+```{r}
+#creation de la nouvelle variable
+data3bis$Regime_politique3 <- 0 # autocratie
+data3bis$Regime_politique3[data3bis$Regime_politique == 3] <- 1
+data3bis=transform(data3bis,Regime_politique3 =as.factor(Regime_politique3))
+print(data3bis)
+```
+
+
+```{r}
+glm.Regime_pol3= glm(Regime_politique3 ~ .-Regime_politique, data=data3bis, family=binomial(link="logit"),control=list(maxit=100,epsilon=1))
+summary(glm.Regime_pol3)
+```
+
+le pseudo $R^2$ associé à ce modèle et commentez.
+
+```{r}
+pseudoR2 = (glm.Regime_pol3$null.deviance - glm.Regime_pol3$deviance)/glm.Regime_pol3$null.deviance
+pseudoR2
+```
+$R^2$=0.7 c'est plutôt bon
+
+Le modele constant est-il envisageable ?
+
+```{r}
+ModConst = glm(Regime_politique3 ~ 1, data=data3bis, family=binomial(link="logit"))
+summary(ModConst)
+anova(ModConst,glm.Regime_pol3,test="Chisq")
+```
+p val =1.868e-06 <0.05 donc on rejette H0 le modele n'est pas constant
+
+```{r}
+exp(glm.Regime_pol3$coefficients)
+```
+
+# Sélection de variables :
+#Critère AIC
+```{r}
+step(glm.Regime_pol3,trace=FALSE,direction=c("backward"))
+
+```
+sous modele retenu :
+Regime_politique3 ~ Corruption + 
+    HDI + Budget_militaire_from_GPD + Sous_alimentation + Pop_urban + 
+    Pop_rural
+```{r}
+modselect_AIC3 = glm(formula = Regime_politique3 ~ Corruption + Budget_militaire_from_GPD, family = binomial(link = "logit"), data = data3bis, control = list(maxit = 100, epsilon = 1))
+```
+
+```{r}
+anova(modselect_AIC3,glm.Regime_pol3,test="Chisq")
+``` 
+p-val =0.91 > 0.05 donc on accepte l'hypothese cad que le sous modele est accepté
+
+#Critère BIC
+```{r}
+step(glm.Regime_pol3, trace=FALSE,direction="backward", k=log(nrow(data3bis)))
+
+```
+
+On garde les variables age demo, droit de l'Homme et budget militaire pour exprimer le régime politique (2)
+
+````{r}
+modselect_BIC3=glm(formula = Regime_politique3 ~ Corruption + Budget_militaire_from_GPD, family = binomial(link = "logit"), data = data3bis, control = list(maxit = 100, epsilon = 1))
+
+
+anova(modselect_BIC3,glm.Regime_pol3,test="Chisq")
+```
+pval=0.91 on accepte le sous modele
+
