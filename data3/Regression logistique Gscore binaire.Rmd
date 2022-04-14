@@ -31,6 +31,7 @@ library(gridExtra)
 data3=read.csv("data3_Gscore.csv",header=TRUE,sep=";",dec=",")
 rownames(data3)<-data3$Entity
 data3=data3[,-1]
+data3=data3[,-8]
 data3 =data3 %>% filter(!is.na(Gscore))
 print(data3)
 ```
@@ -95,9 +96,10 @@ step(glm.Gscore,trace=FALSE,direction=c("backward"))
 sous modele retenu :
 Gscore ~ Corruption + Annes_detudes + Espérance_vie + Budget_militaire_from_GPD + Acces_Internet_pers
 
-
 ```{r}
-modselect_AIC = glm(Gscore ~ Corruption + Annees_detudes + Espérance_vie + Budget_militaire_from_GPD + Acces_Internet_pers, data=data3, family = binomial(link="logit"))
+modselect_AIC = glm(Gscore ~ Corruption + Mean_years_of_schooling + 
+    Life_expectancy + Military_expenditure_as_share_of_GDP + 
+    Proportion_of_individuals_using_the_internet, data=data3, family = binomial(link="logit"))
 summary(modselect_AIC)
 ```
 
@@ -109,7 +111,7 @@ pseudoR2
 ```{r}
 anova(modselect_AIC,glm.Gscore,test="Chisq")
 ``` 
-p-val =0.85 > 0.05 donc on accepte l'hypothese cad que le sous modele est accepté
+p-val =0.8953 > 0.05 donc on accepte l'hypothese cad que le sous modele est accepté
 
 #Critère BIC
 ```{r}
@@ -120,7 +122,8 @@ step(glm.Gscore, trace=FALSE,direction="backward", k=log(nrow(data3)))
 On garde les variables corruption, années d'études et budget militaire (même que AIC moins Espérance vie et acces internet)
 
 ````{r}
-modselect_BIC=glm(formula = Gscore ~ Corruption +Annees_detudes+Budget_militaire_from_GPD, family = binomial(link = "logit"),  data = data3)
+modselect_BIC=glm(formula = Gscore ~Corruption + Mean_years_of_schooling + 
+    Military_expenditure_as_share_of_GDP, family = binomial(link = "logit"),  data = data3)
 summary(modselect_BIC)
 ```
 
@@ -132,7 +135,7 @@ pseudoR2
 ```{r}
 anova(modselect_BIC,glm.Gscore,test="Chisq")
 ```
-pval=0.61 on accepte le sous modele
+pval=0.65 on accepte le sous modele
 
 
 # Regression logistique partie 2
@@ -144,6 +147,7 @@ Dans cette étude on ne conserve que les pays donc le Gscore au dessus de 7.5 et
 data3=read.csv("data3_Gscore.csv",header=TRUE,sep=";",dec=",")
 rownames(data3)<-data3$Entity
 data3=data3[,-1]
+data3=data3[,-8]
 data3 =data3 %>% filter(!is.na(Gscore))
 data3=subset(data3,data3$Gscore>7.5 |data3$Gscore<3.5)
 data3$Gscore[data3$Gscore > 7.5] <- 1
@@ -192,7 +196,9 @@ Gscore ~ Droit_de_lHomme + Corruption + Espérance_vie + Budget_militaire_from_G
 Si on compare au jeu de données divisé en supérieur et iférieur à 5, on droit de l'Homme et années d'études en moins mais on les populations en plus.
 
 ```{r}
-modselect_AIC3 = glm(formula = Gscore ~ Droit_de_lHomme + Corruption + Espérance_vie + Budget_militaire_from_GPD + Acces_Internet_pers + Pop_urban + Pop_rural, family = binomial(link = "logit"), data = data3, control = list(maxit = 100, epsilon = 1))
+modselect_AIC3 = glm(formula = Gscore ~ Human_Rights + Corruption + Life_expectancy + 
+    Military_expenditure_as_share_of_GDP + Proportion_of_individuals_using_the_internet + 
+    Urban_population + Rural_population, family = binomial(link = "logit"), data = data3, control = list(maxit = 100, epsilon = 1))
 pseudoR2 = (modselect_AIC3$null.deviance - modselect_AIC3$deviance)/modselect_AIC3$null.deviance
 pseudoR2
 ```
@@ -213,7 +219,8 @@ Gscore ~ Corruption + Budget_militaire_from_GPD + Pop_urban + Pop_rural
 En comparaison avec le critère BIC pour le jeu de données divisé en sup et inf de 5, on a les populations en plus et les années d'études en moins
 
 ````{r}
-modselect_BIC3=glm(formula = Gscore ~ Corruption + Budget_militaire_from_GPD + Pop_urban + Pop_rural, family = binomial(link = "logit"), data = data3)
+modselect_BIC3=glm(formula = Gscore ~ Corruption + Military_expenditure_as_share_of_GDP + 
+    Urban_population + Rural_population, family = binomial(link = "logit"), data = data3)
 pseudoR2 = (modselect_BIC3$null.deviance - modselect_BIC3$deviance)/modselect_BIC3$null.deviance
 pseudoR2
 anova(modselect_BIC3,glm.Gscore2,test="Chisq")
