@@ -1,4 +1,4 @@
-Entity;Regime_politique;Droit_de_lHomme;Liberte_economique;Inegalite_des_genres;Proportion_denfants_harceles;Corruption;Taux_alphabetisation;HDI;Annes_detudes;Espérance_vie;Budget_militaire_from_GPD;Sous_alimentation;Acces_Internet_pers;Acces_electricite_pers;Pop_urban;Pop_rural
+Entity;Political_Regime;Human_Rights;Economic_freedom;Gender_inequalities;Proportion_of_bullied_children;Corruption;Literacy_rate;HDI;Mean_years_of_schooling;Life_expectancy;Military_expenditure_as_share_of_GDP;Undernourishment;Proportion_of_individuals_using_the_internet;Proportion_of_the_population_with_access_to_electricity;Urban_population;Rural_population
 Afghanistan;1;-2,311016703; ;0,667;48,1;16;38,168041;0,498;3,8;64,833;1,173907978;29,9;11,44768809;97,7;10131490;28796851
 Albania;2;0,851179641;7,538571065;0,26699999;43,3;36;97,553902;0,785;10;78,573;1,27255922;3,6;71,8470405;100;1762579;1075164
 Algeria;1;0,354196847;4,985321051;0,42899999;52;35;79,608398;0,754;8;76,88;6,009523489;2,8;47,69105515;99,5;32332690;11518353
