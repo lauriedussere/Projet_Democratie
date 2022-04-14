@@ -21,6 +21,8 @@ library(cowplot)
 library("NbClust")
 library(missForest)
 library(dplyr)
+library(leaps)
+library('MASS')
 ```
 
 
@@ -30,7 +32,8 @@ library(dplyr)
 ```{r}
 data3=read.csv("data3_Gscore.csv",header=TRUE,sep=";",dec=",")
 rownames(data3)=data3$Entity
-data3=data3[-1]
+data3=data3[,-1]
+data3=data3[,-8]
 head(data3)
 ```
 
@@ -84,24 +87,27 @@ budget militaire %GPD
 On retrouve presque les mêmes variables que quand on a étudié le dataset complet soit avec tout le Gscore. On a HDI remplacé par Droit de l'Homme
 
 ```{r}
-reg.BIC=lm(Gscore~Droit_de_lHomme+Corruption+Budget_militaire_from_GPD, data=data3)
+reg.BIC=lm(Gscore~Human_Rights+Corruption+Military_expenditure_as_share_of_GDP, data=data3)
 summary(reg.BIC)
 anova(reg.BIC,reg.mult)
 ``` 
 
-pval=0.6078>0.05 donc on accepte le sous modèle
+pval=0.5575>0.05 donc on accepte le sous modèle
 
 
 
 ```{r}
 select_aic=stepAIC(lm(Gscore~., data=data3), trace=TRUE)
 ```
-On garde les même variable qu'avec le critere BIC plus HDI et accès à internet. Dans le modele lineaire complet on avait inégalite des genres à la place de Accès à internet
+
+On garde les même variable qu'avec le critere BIC plus internet pop rurale et urbaine et espérance de vie.
+et accès à internet.
+(On garde les même variable qu'avec le critere BIC plus HDI et accès à internet. Dans le modele lineaire complet on avait inégalite des genres à la place de Accès à internet)
 
 
 ````{r}
-reg.Aic <- lm(Gscore ~ Droit_de_lHomme + Corruption + HDI + Budget_militaire_from_GPD + Acces_Internet_pers,data=data3)
+reg.Aic <- lm(Gscore ~ Human_Rights + Corruption + Life_expectancy + Military_expenditure_as_share_of_GDP + Proportion_of_individuals_using_the_internet + Urban_population + Rural_population,data=data3)
 summary(reg.Aic)
 anova(reg.Aic,reg.mult)
 ```
-pval=0.87 on accepte le sous modèle
+pval=0.9154 on accepte le sous modèle
