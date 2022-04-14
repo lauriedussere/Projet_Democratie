@@ -26,6 +26,7 @@ library(MASS)
 data3=read.csv("data3_Gscore.csv",header=TRUE,sep=";",dec=",")
 rownames(data3)<-data3$Entity
 data3=data3[,-1]
+data3=data3[,-8]
 head(data3)
 ```
 ```{r}
@@ -40,7 +41,7 @@ class(data3)
 #Univariable
 
 ```{r}
-reg.simple1=lm(Gscore~Droit_de_lHomme,data=data3)
+reg.simple1=lm(Gscore~Human_Rights,data=data3)
 summary(reg.simple1)
 ```
 R²=0.48 c'est assez bas
@@ -58,7 +59,7 @@ Annnees d'études (0.20)
 avec toujours une p-val inférieure à 0.05
 
 ```{r}
-scatter_plot <- ggplot(data3,aes(x=Gscore,y=Droit_de_lHomme)) + geom_point() + theme_minimal()
+scatter_plot <- ggplot(data3,aes(x=Gscore,y=Human_Rights)) + geom_point() + theme_minimal()
 scatter_plot + geom_smooth(method="lm", se=TRUE, col="skyblue3")
 ```
 
@@ -73,12 +74,12 @@ p-val=0.64>.05 donc on accpete H0 cad residus suivent une loi normale
 
 
 ```{r}
-reg.simple2=lm(Gscore~Pop_urban,data=data3)
+reg.simple2=lm(Gscore~Urban_population,data=data3)
 summary(reg.simple2)
 ```
 
 ```{r}
-reg.simple2=lm(Gscore~Pop_rural,data=data3)
+reg.simple2=lm(Gscore~Rural_population,data=data3)
 summary(reg.simple2)
 ```
 Tous les modèles linéaires univariables ont été testés. On a toujours des p val infériere à 0.05 sauf dans le cas de Poplation rurale et urbaine.
@@ -111,29 +112,36 @@ plot(select,scale="bic")
 ```
 On garde :
 Corruption
-HDI
+Electricité
 Budget militaire
+
+
+(On garde :
+Corruption
+HDI
+Budget militaire)
 
 
 
 ````{r}
-reg.mult.Bic <- lm(Gscore~Corruption+HDI+Budget_militaire_from_GPD,data=data3)
+reg.mult.Bic <- lm(Gscore~Corruption+Proportion_of_the_population_with_access_to_electricity+Military_expenditure_as_share_of_GDP,data=data3)
 summary(reg.mult.Bic)
 anova(reg.mult.Bic,reg.mult)
 ```
 On accepte l'hypothese de sous modele car 0.36 > 0.05
 
 ```{r}
-select_aic=stepAIC(lm(Gscore~., data=data3), trace=TRUE)
+select_aic=stepAIC(lm(Gscore~., data=data3), trace=FALSE)
+summary(select_aic)
 ```
-On garde les mêmes variables qu'avec le critere BIC droit de l'Homme et inégalité des genres
+On garde les mêmes variables qu'avec le critere BIC  plus droit de l'Homme
 
 
 ````{r}
-reg.mult.Aic <- lm(Gscore ~ Droit_de_lHomme + Inegalite_des_genres + Corruption + HDI + Budget_militaire_from_GPD, data=data3)
+reg.mult.Aic <- lm(Gscore ~  Human_Rights + Corruption + Military_expenditure_as_share_of_GDP + Proportion_of_the_population_with_access_to_electricity,data=data3)
 summary(reg.mult.Aic)
 anova(reg.mult.Aic,reg.mult)
 ```
-p val= 0.7 > 0.5 donc on accepte le sous modele
+p val= 0.8217 > 0.5 donc on accepte le sous modele
 
 
