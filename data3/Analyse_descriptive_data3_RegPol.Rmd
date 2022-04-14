@@ -27,7 +27,7 @@ head(data3)
 
 
 ```{r}
-data3 =data3 %>% filter(!is.na(Regime_politique))
+data3 =data3 %>% filter(!is.na(Political_Regime))
 print(data3)
 ``` 
 
@@ -44,22 +44,22 @@ summary(data3)
 ```
 
 ```{r}
-Regime_politique=data3$Regime_politique
-Age_democratie=data3$Age_democratie
-Droit_de_lHomme=data3$Droit_de_lHomme
-Liberte_economique=data3$Liberte_economique
-Inegalite_des_genres=data3$Inegalite_des_genres
-Proportion_denfants_harceles=data3$Proportion_denfants_harceles
+Political_Regime=data3$Political_Regime
+Human_Rights=data3$Human_Rights
+Economic_freedom=data3$Economic_freedom
+
+Gender_inequalities=data3$Gender_inequalities
+Proportion_of_bullied_children=data3$Proportion_of_bullied_children
 Corruption=data3$Corruption
-Taux_alphabetisation=data3$Taux_alphabetisation
-Annes_detudes=data3$Annes_detudes
-Espérance_vie=data3$Espérance_vie
-Budget_militaire_from_GPD=data3$Budget_militaire_from_GPD
-Sous_alimentation=data3$Sous_alimentation
-Acces_Internet_pers=data3$Acces_Internet_pers
-Acces_electricite_pers=data3$Acces_electricite_pers
-Pop_urban=data3$Pop_urban 
-Pop_rural=data3$Pop_rural
+Literacy_rate=data3$Literacy_rate
+Mean_years_of_schooling=data3$Mean_years_of_schooling
+Life_expectancy=data3$Life_expectancy
+Military_expenditure_as_share_of_GDP=data3$Military_expenditure_as_share_of_GDP
+Undernourishment=data3$Undernourishment
+Proportion_of_individuals_using_the_internet=data3$Proportion_of_individuals_using_the_internet
+Proportion_of_the_population_with_access_to_electricity=data3$Proportion_of_the_population_with_access_to_electricity
+Urban_population=data3$Urban_population
+Rural_population=data3$Rural_population
 ```
 
 
@@ -73,13 +73,12 @@ boxplot(data3)
 Remarque : la médiane de Regime pol est très très haute
 ```{r}  
 par(mfrow=c(3,2))
-class(Regime_politique)
-hist(Regime_politique,breaks = "FD",freq =TRUE, main = "Regime_politique",xlab = "Regime_politique")
-hist(Age_democratie,main="Age_democratie", xlab="Age_democratie")
-hist(Droit_de_lHomme,breaks = "FD",freq=TRUE, main ="Droit_de_lHomme",xlab="Droit_de_lHomme")
-hist(Liberte_economique,breaks = "FD",freq=TRUE, main ="Liberte_economique", xlab="Liberte_economique")
-hist(Inegalite_des_genres,breaks = "FD",freq=TRUE, main ="Inegalite_des_genres ",xlab="Inegalite_des_genres")
-hist(Proportion_denfants_harceles,breaks = "FD",freq=TRUE, main ="Proportion_denfants_harceles",xlab="Proportion_denfants_harceles")
+class(Political_Regime)
+hist(Political_Regime,breaks = "FD",freq =TRUE, main = "Political_Regime",xlab = "Political_Regime")
+hist(Human_Rights,breaks = "FD",freq=TRUE, main ="Human_Rights",xlab="Human_Rights")
+hist(Economic_freedom,breaks = "FD",freq=TRUE, main ="Economic_freedom", xlab="Economic_freedom")
+hist(Gender_inequalities,breaks = "FD",freq=TRUE, main ="Gender_inequalities ",xlab="Gender_inequalities")
+hist(Proportion_of_bullied_children,breaks = "FD",freq=TRUE, main ="Proportion_of_bullied_children",xlab="Proportion_of_bullied_children")
 
 
 ```
@@ -88,21 +87,21 @@ Age demo : beaucoup de pays qui sont des democratie depuis peu de temps
 ```{r}
 par(mfrow=c(3,2))
 hist(Corruption,breaks = "FD",freq=TRUE, main ="Corruption", xlab="Corruption")
-hist(Taux_alphabetisation,breaks = "FD",freq=TRUE, main ="Taux_alphabetisation", xlab="Taux_alphabetisation")
-hist(Annes_detudes,breaks = "FD",freq=TRUE, main ="Annes_detudes ",xlab="Annes_detudes")
-hist(Espérance_vie,breaks = "FD",freq=TRUE, main ="Espérance_vie", xlab="Espérance_vie")
-hist(Budget_militaire_from_GPD,breaks = "FD",freq=TRUE, main ="Budget_militaire_from_GPD") 
-hist(Sous_alimentation,breaks = "FD",freq=TRUE, main ="Sous_alimentation")
+hist(Literacy_rate,breaks = "FD",freq=TRUE, main ="Literacy_rate", xlab="Literacy_rate")
+hist(Mean_years_of_schooling,breaks = "FD",freq=TRUE, main ="Mean_years_of_schooling ",xlab="Mean_years_of_schooling")
+hist(Life_expectancy,breaks = "FD",freq=TRUE, main ="Life_expectancy", xlab="Life_expectancy")
+hist(Military_expenditure_as_share_of_GDP,breaks = "FD",freq=TRUE, main ="Military_expenditure_as_share_of_GDP") 
+hist(Undernourishment,breaks = "FD",freq=TRUE, main ="Undernourishment")
 
 
 ```
 Taux d'alphabétisation : beaucoup de pays ont un fort taux
 ```{r}
 par(mfrow=c(2,2))
-hist(Acces_Internet_pers,breaks = "FD",freq =TRUE, main = "Acces_Internet_pers",xlab = "Acces_Internet_pers")
-hist(Acces_electricite_pers,main="Acces_electricite_pers", xlab="Acces_electricite_pers")
-hist(Pop_urban,breaks = "FD",freq=TRUE, main ="Pop_urban",xlab="Pop_urban")
-hist(Pop_rural,breaks = "FD",freq=TRUE, main ="Pop_rural", xlab="Pop_rural")
+hist(Proportion_of_individuals_using_the_internet,breaks = "FD",freq =TRUE, main = "Proportion_of_individuals_using_the_internet",xlab = "Proportion_of_individuals_using_the_internet")
+hist(Proportion_of_the_population_with_access_to_electricity,breaks = "FD",freq=TRUE, main="Proportion_of_the_population_with_access_to_electricity", xlab="Proportion_of_the_population_with_access_to_electricity")
+hist(Urban_population,breaks = "FD",freq=TRUE, main ="Urban_population",xlab="Urban_population")
+hist(Rural_population,breaks = "FD",freq=TRUE, main ="Rural_population", xlab="Rural_population")
 
 ```
 
@@ -192,7 +191,7 @@ plot(res.acp,choix="ind", label="none", habillage = 1, axes = c(1,2))
 
 
 ```{r}
-fviz_pca_ind(res.acp, col.ind = Regime_politique, repel = TRUE)
+fviz_pca_ind(res.acp, col.ind = Political_Regime, repel = TRUE)
 ```
 Pays plus democratiques à droite
 
