@@ -1,0 +1,168 @@
+---
+title: "RandomForest"
+author: "Manon Santrisse"
+date: "27/03/2022"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(corrplot)
+library("xlsx")
+library(FactoMineR)
+library(factoextra)
+library(cowplot)
+library("NbClust")
+library(readxl)
+library(missForest)
+library(glmnet)
+library(MASS)
+library(leaps)
+library(bestglm)
+library(logistf)
+
+
+library(rpart)
+library(dplyr)
+library(randomForest)
+```
+
+```{r}
+#data3= read_excel("data3_Gscore.xlsx")
+data3=read.csv("data3_Gscore.csv",header=TRUE,sep=";",dec=",")
+data3 =data3 %>% filter(!is.na(Gscore))
+
+rownames(data3)<-data3$Entity
+data3=data3[,-1]
+head(data3)
+```
+
+Le nombre d’arbres que la modèle va utiliser – ntree
+
+Le nombre de variables testées à chaque division d’un noeud – mtry 
+
+dans la classification : on prend en général mtry=racine(du nombre de variable)
+dans la régression : mtry=nb_variables/3
+
+
+
+```{r}
+#A décocher quand on veut que les très démocratiques et très autoritaires
+data3=subset(data3,data3$Gscore>7.5 |data3$Gscore<3.5)
+#head(data3)
+```
+
+## Cas de la régression 
+```{r}
+# Algorithme Random Forest  
+Gscore_RandomForest <- randomForest(Gscore~.,data=data3, ntree = 100, 
+                                  mtry = 5, na.action = na.roughfix) #pour 15 variables
+
+print(Gscore_RandomForest)
+
+```
+
+Comme pour tout modèle construit par agrégation ou boîte noire, il n’y a
+pas d’interprétation directe. Néanmoins des informations pertinentes sont obtenues par le calcul et la représentation graphique d’indices proportionnels à
+l’importance de chaque variable dans le modèle agrégé et donc de sa participation à la régression ou à la discrimination. C’est évidemment d’autant plus
+utile que les variables sont très nombreuses. Deux critères sont ainsi proposés
+pour évaluer l’importance de la jème variable.
+
+
+```{r}
+#Variables d'importance 
+Gscore_RandomForest$importance[order(Gscore_RandomForest$importance[, 1], 
+                            decreasing = TRUE), ]
+```
+
+Les 4 variables les plus importantes sont Corruption,  Droit de l'Homme, Espérance de vie et HDI
+
+## Cas de la classification
+
+```{r}
+#data3= read_excel("data3_Gscore.xlsx")
+data3=read.csv("data3_Gscore.csv",header=TRUE,sep=";",dec=",")
+data3 =data3 %>% filter(!is.na(Gscore))
+
+rownames(data3)<-data3$Entity
+data3=data3[,-1]
+head(data3)
+```
+
+```{r}
+#A décocher quand on veut travailler avec les pays très demo et très autoritaires
+##data3=subset(data3,data3$Gscore>7.5 |data3$Gscore<3.5)
+#head(data3)
+```
+
+```{r}
+data3$Gscore[data3$Gscore >= 5] <- 1
+data3$Gscore[data3$Gscore !=1] <- 0
+```
+
+```{r}
+# Algorithme Random Forest
+data3[,"Gscore"]=as.factor(data3[,"Gscore"])
+Gscore_RandomForest <- randomForest(Gscore~.,data=data3, ntree = 8000, 
+                                  mtry = 4, na.action = na.roughfix)
+
+print(Gscore_RandomForest)
+```
+
+
+```{r}
+plot(Gscore_RandomForest$err.rate[, 1], type = "l", xlab = "nombre d'arbres", ylab = "erreur OOB")
+```
+
+
+
+
+```{r}
+# Algorithme Random Forest
+data3[,"Gscore"]=as.factor(data3[,"Gscore"])
+Gscore_RandomForest <- randomForest(Gscore~.,data=data3, ntree = 3000, #il faut choisir le bon ntree
+                                  mtry = 4, na.action = na.roughfix)
+
+print(Gscore_RandomForest)
+```
+
+Chaque arbre de la forêt est construit sur une fraction ("in bag") des données (c'est la fraction qui sert à l'entraînement de l'algorithme. Alors pour chacun des individus de la fraction restante ("out of bag") l'arbre peut prédire une classe.
+
+
+Nous avons egalement l'affichage de la matrice de confusion, nous remarquons que qu'il y a 17.69 % d'erreurs pour les 2 catégories (démocratiques et non démocratique)
+
+### Importance des variables : 
+```{r}
+varImpPlot(Gscore_RandomForest)
+```
+
+
+```{r}
+Gscore_RandomForest$importance[order(Gscore_RandomForest$importance[, 1], decreasing = TRUE), ]
+```
+Dans le modèle calculé, les 4 élements qui comptent le plus pour distinguer démocratie/non démocratie sont la corruption, les droit de l'Homme, les libertés économiques et l'accès à internet par personne.
+
+On peut examiner graphiquement ces élements
+
+
+
+```{r}
+plot(Gscore ~ Corruption, data = data3)
+```
+Partie foncée = démocraties/ partie claire =  autocraties
+Les pays non démocratiques ont une variable corruption faible par exemple entre 10 et en gris (cad que le pays est très corrompu) tandis que entre 70 et 90 on n'a que du foncé donc les pays démocratiques sont peu corrompus.
+
+
+```{r}
+plot(Gscore ~ Droit_de_lHomme, data = data3)
+```
+
+Les pays démocratiques ont surtout un indice droit de l'homme positif tandis que les autocraties ont un indice négatifs en majorit.
+```{r}
+plot(Gscore ~ Liberte_economique, data = data3)
+```
+
+
+
+
+
