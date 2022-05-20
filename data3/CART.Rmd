@@ -32,6 +32,7 @@ library(dplyr)
 data3=read.csv("data3_Gscore.csv",header=TRUE,sep=";",dec=",")
 rownames(data3)<-data3$Entity
 data3=data3[,-1]
+data3=data3[,-8]
 data3=data3%>% filter(!is.na(Gscore))
 head(data3)
 ```
@@ -140,6 +141,7 @@ prp(gscore.Tree_Opt,extra=1)
 data3=read.csv("data3_Gscore.csv",header=TRUE,sep=";",dec=",")
 rownames(data3)<-data3$Entity
 data3=data3[,-1]
+data3=data3[,-8]
 #data3=data3[,-2]
 data3=data3%>% filter(!is.na(Gscore))
 data3=subset(data3,data3$Gscore>7.5 |data3$Gscore<3.5)
