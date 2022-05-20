@@ -22,7 +22,7 @@ In this way, we use 3 different datasets :
 
 
 
-In order to find the best variables to define a democracy with use several statistics tools such as :
+In order to find the best variables to define a democracy we used several statistics tools such as :
 - PCA
 - Linear regression
 - Logistic model
