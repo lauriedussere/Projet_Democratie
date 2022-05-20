@@ -1,0 +1,248 @@
+---
+title: "Arbre regression et classification"
+author: "Manon Santrisse"
+date: "26/03/2022"
+output: html_document
+---
+
+```{r include=FALSE}
+library(ggplot2)
+library(corrplot)
+library("xlsx")
+library(FactoMineR)
+library(factoextra)
+library(cowplot)
+library(readxl)
+library(missForest)
+library(glmnet)
+library(MASS)
+library(leaps)
+library(bestglm)
+library(logistf)
+
+
+library(rpart)
+library(dplyr)
+library(rpart.plot)
+```
+
+
+```{r}
+data3=read.csv("data3_Gscore.csv",header=TRUE,sep=";",dec=",")
+rownames(data3)<-data3$Entity
+data3=data3[,-1]
+data3=data3%>% filter(!is.na(Gscore))
+head(data3)
+```
+
+
+```{r}
+#data=scale(data)
+```
+
+
+## Avec le jeu de données 3 entier
+
+# Arbre de regression
+```{r}
+gscore.tree=rpart(Gscore~.,data=data3,method="anova")
+printcp(gscore.tree)
+plotcp(gscore.tree)
+summary(gscore.tree)
+```
+Le cp idéal est 0.045 d'après le graph.
+
+```{r,fig.height=5}
+plot(gscore.tree, uniform=TRUE,
+   main="Regression Tree for Gscore ")
+text(gscore.tree, use.n=TRUE, all=TRUE, cex=.8)
+
+#dev.print(device = png, file = "RegTree_complet.png", width = 600)
+```
+Corruption est la première variable qui permet de séparer les pays.
+
+```{r}
+rpart.plot(gscore.tree)
+dev.print(device = png, file = "RegTree_data3.png", width = 600)
+```
+
+
+```{r, fig.height=3}
+gscore.tree_opt <- prune(gscore.tree,cp=gscore.tree$cptable[which.min(gscore.tree$cptable[,4]),1])
+plot(gscore.tree_opt, uniform=TRUE,
+   main="Regression Tree for Gscore ")
+text(gscore.tree, use.n=TRUE, all=TRUE, cex=.8)
+
+```
+```{r}
+rpart.plot(gscore.tree)
+```
+
+# Arbre de classification
+
+```{r}
+head(data3)
+
+```
+
+
+```{r}
+#on transforme d'abord le gscore en variable binaire
+
+data3$Gscore[data3$Gscore >= 5] <- 1
+data3$Gscore[data3$Gscore !=1] <- 0
+
+head(data3)
+```
+
+Arbre de classification sans paramètre
+```{r, fig.height=5}
+fit=rpart(Gscore~.,method="class", data=data3)
+
+printcp(fit) # display the results
+plotcp(fit) # visualize cross-validation results
+summary(fit) # detailed summary of splits
+
+# plot tree
+plot(fit, uniform=TRUE,
+   main="Classification Tree for Gscore")
+text(fit, use.n=TRUE, all=TRUE, cex=.8)
+dev.print(device = png, file = "ClassTree_complet.png", width = 600)
+```
+Droit de l'homme, corruption étaient les variables qui ressortaient dans les RandomForest
+
+
+Arbre de classification avec contrainte
+```{r, fig.height=5}
+fit=rpart(Gscore~.,method="class", data=data3, minsplit = 10, minbucket=3)
+
+printcp(fit) # display the results
+plotcp(fit) # visualize cross-validation results
+summary(fit) # detailed summary of splits
+
+# plot tree
+plot(fit, uniform=TRUE,
+   main="Classification Tree for Gscore")
+text(fit, use.n=TRUE, all=TRUE, cex=.8)
+```
+
+
+
+```{r}
+#AUTRE AFFICHAGE 
+#library(rpart.plot)
+#tree_model = rpart(Gscore~., data = data3,method="class", minsplit = 10, minbucket=3)
+#prp(tree_model)
+```
+```{r}
+library(rpart.plot)
+gscore.Tree_Opt <- prune(fit,cp=fit$cptable[which.min(fit$cptable[,4]),1])
+prp(gscore.Tree_Opt,extra=1)
+```
+
+
+## Avec le jeu de données 3 dans lequel on sélectionne les pays les plus démocratiques et autoritaires
+
+```{r}
+data3=read.csv("data3_Gscore.csv",header=TRUE,sep=";",dec=",")
+rownames(data3)<-data3$Entity
+data3=data3[,-1]
+#data3=data3[,-2]
+data3=data3%>% filter(!is.na(Gscore))
+data3=subset(data3,data3$Gscore>7.5 |data3$Gscore<3.5)
+head(data3)
+```
+
+
+```{r}
+#data=scale(data)
+```
+
+
+# Arbre de regression
+
+```{r}
+gscore.tree=rpart(Gscore~.,data=data3,method="anova")
+printcp(gscore.tree)
+plotcp(gscore.tree)
+summary(gscore.tree)
+```
+
+```{r,fig.height=5}
+plot(gscore.tree, uniform=TRUE,
+   main="Regression Tree for Gscore ")
+text(gscore.tree, use.n=TRUE, all=TRUE, cex=.8)
+
+dev.print(device = png, file = "RegTree_incomplet.png", width = 600)
+```
+On garde uniquement corruption et inégalité des genres
+
+```{r}
+gscore.tree_opt <- prune(gscore.tree,cp=gscore.tree$cptable[which.min(gscore.tree$cptable[,4]),1])
+plot(gscore.tree_opt, uniform=TRUE,
+   main="Regression Tree for Gscore ")
+text(gscore.tree, use.n=TRUE, all=TRUE, cex=.8)
+
+```
+Le même arbre est gardé
+
+## Arbre de classification
+
+```{r}
+head(data3)
+```
+
+
+```{r}
+#on transforme d'abord le gscore en variable binaire
+
+data3$Gscore[data3$Gscore >= 7.5] <- 1
+data3$Gscore[data3$Gscore !=1] <- 0
+
+head(data3)
+```
+
+Arbre de classification sans paramètre
+```{r, fig.height=5}
+fit=rpart(Gscore~.,method="class", data=data3)
+
+printcp(fit) # display the results
+plotcp(fit) # visualize cross-validation results
+summary(fit) # detailed summary of splits
+
+# plot tree
+plot(fit, uniform=TRUE,
+   main="Classification Tree for Gscore")
+text(fit, use.n=TRUE, all=TRUE, cex=.8)
+dev.print(device = png, file = "ClassTree_incomplet.png", width = 600)
+```
+On garde uniquement la corruption
+
+Arbre de classification avec contrainte
+```{r, fig.height=5}
+fit=rpart(Gscore~.,method="class", data=data3, minsplit = 10, minbucket=3)
+
+printcp(fit) # display the results
+plotcp(fit) # visualize cross-validation results
+summary(fit) # detailed summary of splits
+
+# plot tree
+plot(fit, uniform=TRUE,
+   main="Classification Tree for Gscore")
+text(fit, use.n=TRUE, all=TRUE, cex=.8)
+```
+On garde uniquement corruption et droit de l'homme
+
+
+```{r}
+#AUTRE AFFICHAGE 
+library(rpart.plot)
+tree_model = rpart(Gscore~., data = data3,method="class")
+prp(tree_model)
+dev.print(device = png, file = "ClassTree_incomplet.png", width = 600)
+```
+```{r}
+library(rpart.plot)
+gscore.Tree_Opt <- prune(fit,cp=fit$cptable[which.min(fit$cptable[,4]),1])
+prp(gscore.Tree_Opt,extra=1)
+```

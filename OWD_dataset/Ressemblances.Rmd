@@ -1,0 +1,1167 @@
+---
+title: "est ce que les pays demo ou non se ressemblent"
+output: html_document
+---
+
+```{r include=FALSE}
+library(ggplot2)
+library(corrplot)
+#library("xlsx")
+library(FactoMineR)
+library(factoextra)
+library(cowplot)
+library(readxl)
+library(missForest)
+library(glmnet)
+library(MASS)
+library(leaps)
+library(logistf)
+library(dplyr)
+library(nortest)
+library(gridExtra)
+library(car)
+```
+
+Nous allons ici tenter de regarder si tous les pays démocratiques ont des caractéristiques similaires. Nous ferons ensuite de même pour les pays non démocratiques. 
+
+```{r}
+data3=read.csv("data3-modif.csv",header=TRUE,sep=";",dec=",")
+rownames(data3)<-data3$Entity
+data3=data3[,-1]
+data3=data3[,-8]
+head(data3)
+```
+
+
+```{r}
+data3=data3%>% filter(!is.na(Political_Regime))
+
+head(data3)
+```
+
+```{r}
+data1=subset(data3,Political_Regime==3) #pays les plus démocratiques
+data2=subset(data3,Political_Regime==0) #pays les moins démocratiques
+```
+
+
+```{r}
+scale_data1=scale(data1)
+boxplot(scale_data1)
+```
+
+
+```{r}
+scale_data2=scale(data2)
+boxplot(scale_data2)
+```
+
+
+
+## Etude de la variable Droit_de_lHomme
+
+```{r}
+Human_Rights1=data1$Human_Rights
+Human_Rights2=data2$Human_Rights
+print("PAYS DEMOCRATIQUES")
+summary(Human_Rights)
+print("variance =") ; print(var(Human_Rights1,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Human_Rights1,na.rm=TRUE))
+print("-----------------------------------")
+print("PAYS NON DEMOCRATIQUES")
+summary(Human_Rights2)
+print("variance =") ; print(var(Human_Rights2,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Human_Rights2,na.rm=TRUE))
+print("-----------------------------------")
+print("MONDE")
+summary(data3$Human_Rights)
+print("variance =") ; print(var(data3$Human_Rights,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(data3$Human_Rights,na.rm=TRUE))
+```
+
+```{r}
+par(mfrow=c(1,3))
+hist(Human_Rights1,freq =TRUE, main = "Human_Rights pays démocratiques",xlab = "Human_Rights",ylab = "effectifs")
+hist(Human_Rights2,freq =TRUE, main = "Human_Rights pays non démocratiques",xlab = "Human_Rights",ylab = "effectifs")
+hist(data3$Human_Rights,freq =TRUE, main = "Human_Rights monde",xlab = "Human_Rights",ylab = "effectifs")
+```
+
+```{r}
+boxplot(Human_Rights1,Human_Rights2,main="Human_Rights")
+```
+La moyenne et la médiane des droits de l'Homme pour les pays démocratique sont positives autour de 2 et négatives pour les pays non démocratiques. Une grande partie des valeurs pour les pays non démocratique sont négatives
+
+
+
+```{r}
+p1 = ggplot(data.frame(y=Human_Rights1), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Human_Rights1")
+p2 = ggplot(data.frame(y=Human_Rights2), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Human_Rights2")
+grid.arrange(p1,p2,ncol=2)
+```
+
+
+
+```{r}
+#Hypothèse de normalité des échantillons
+shapiro.test(Human_Rights1)
+shapiro.test(Human_Rights2)
+```
+Les échantillons suivent une loi normale
+
+```{r}
+#Test de comparaison de variance
+var.test(Human_Rights1,Human_Rights2)
+```
+p val =0.99 >0.05 donc on accepte, les échantillons ont même variance
+
+
+```{r}
+#Test de comparaison des moyennes
+t.test(Human_Rights1,Human_Rights2,var.equal=T)
+```
+
+pval=1.04e-11 donc on rejette l'hypothese les moyennes sont différentes.
+
+
+
+## Etude de la variable Liberte_economique
+```{r}
+Economic_freedom1=data1$Economic_freedom
+Economic_freedom2=data2$Economic_freedom
+print("PAYS DEMOCRATIQUES")
+summary(Economic_freedom1)
+print("variance =") ; print(var(Economic_freedom1,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Economic_freedom1,na.rm=TRUE))
+print("-----------------------------------")
+print("PAYS NON DEMOCRATIQUES")
+summary(Economic_freedom2)
+print("variance =") ; print(var(Economic_freedom2,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Economic_freedom2,na.rm=TRUE))
+print("-----------------------------------")
+print("MONDE")
+summary(data3$Economic_freedom)
+print("variance =") ; print(var(data3$Economic_freedom,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(data3$Economic_freedom,na.rm=TRUE))
+```
+
+```{r include=FALSE}
+par(mfrow=c(1,3))
+hist(Economic_freedom1,freq =TRUE, main = "Economic_freedom pays démocratiques",xlab = "Economic_freedom",ylab = "effectifs")
+hist(Economic_freedom2,freq =TRUE, main = "Economic_freedom pays non démocratiques",xlab = "Economic_freedom",ylab = "effectifs")
+hist(data3$Economic_freedom,freq =TRUE, main = "Economic_freedom monde",xlab = "Economic_freedom",ylab = "effectifs")
+```
+
+```{r}
+boxplot(Economic_freedom1,Economic_freedom2,main="Economic_freedom")
+```
+Les libertés économiques sont à peu près les mêmes que le pays soit démocratique ou non. La moyenne est de 7.5 pour les démocraties et 6.5 pour les autres. Par contre la dispersion est plus importante pour les pays non démocratiques.
+
+
+
+```{r}
+p1 = ggplot(data.frame(y=Economic_freedom1), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Economic_freedom1")
+p2 = ggplot(data.frame(y=Economic_freedom2), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Economic_freedom2")
+grid.arrange(p1,p2,ncol=2)
+```
+
+
+
+```{r}
+shapiro.test(Economic_freedom1)
+shapiro.test(Economic_freedom2)
+```
+Les échantillons suivent une loi normale
+
+```{r}
+#Test de comparaison des variances
+var.test(Economic_freedom1,Economic_freedom2)
+```
+p val =0.00002241 <0.05 donc on rejette l'hypothèse, les échantillons n'ont pas même variance
+
+
+```{r}
+#Test de comparaison des moyennes
+t.test(Economic_freedom1,Economic_freedom2,var.equal=F)
+```
+
+pval=0.00009496 donc on rejette l'hypothese les moyennes sont différentes.
+
+
+
+
+## Etude de la variable Inegalite_des_genres
+
+```{r}
+Gender_inequalities1=data1$Gender_inequalities
+Gender_inequalities2=data2$Gender_inequalities
+print("PAYS DEMOCRATIQUES")
+summary(Gender_inequalities1)
+print("variance =") ; print(var(Gender_inequalities1,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Gender_inequalities1,na.rm=TRUE))
+print("-----------------------------------")
+print("PAYS NON DEMOCRATIQUES")
+summary(Gender_inequalities2)
+print("variance =") ; print(var(Gender_inequalities2,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Gender_inequalities2,na.rm=TRUE))
+print("-----------------------------------")
+print("MONDE")
+summary(data3$Gender_inequalities)
+print("variance =") ; print(var(data3$Gender_inequalities,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(data3$Gender_inequalities,na.rm=TRUE))
+```
+
+```{r}
+par(mfrow=c(1,3))
+hist(Gender_inequalities1,freq =TRUE, main = "Gender_inequalities pays démocratiques",xlab = "Gender_inequalities",ylab = "effectifs")
+hist(Gender_inequalities2,freq =TRUE, main = "Gender_inequalities pays non démocratiques",xlab = "Gender_inequalities",ylab = "effectifs")
+hist(data3$Gender_inequalities,freq =TRUE, main = "Gender_inequalities monde",xlab = "Gender_inequalities",ylab = "effectifs")
+```
+
+```{r}
+boxplot(Gender_inequalities1,Gender_inequalities2,main="Gender_inequalities")
+```
+
+On remarque une indépendance entre l'inégalités des genres entre les pays démocratiques et non. La médiane est très basse soit 0.1 pour les démocraties et plus haute soit 0.4 pour les autoritaires. La dispersion pour les régimes autoritaires est très grande soit de 0.3 contre 0.07.
+
+
+```{r}
+#leveneTest(Inegalite_des_genres1~Inegalite_des_genres2)
+```
+
+
+
+```{r}
+p1 = ggplot(data.frame(y=Gender_inequalities1), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Gender_inequalities1")
+p2 = ggplot(data.frame(y=Gender_inequalities2), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Gender_inequalities2")
+grid.arrange(p1,p2,ncol=2)
+```
+
+
+
+```{r}
+#Hypothèse de normalité
+shapiro.test(Gender_inequalities1)
+shapiro.test(Gender_inequalities2)
+```
+On accepte la normalité pour Inegalite_des_genres2 et non pour Inegalite_des_genres1
+
+Les échantillons ne suivent pas tous les deux une loi normale
+
+
+On va considéré qu'aucun des deux ne suivent une loi normale
+
+```{r}
+#test de comparaison des variances
+ansari.test(Gender_inequalities1,Gender_inequalities2)
+```
+p val =0.34 >0.05 donc on accepte l'hypothèse les échantillons sont de variances identiques
+
+
+```{r}
+#test de comparaison des moyennes
+#estime n grand
+t.test(Gender_inequalities1,Gender_inequalities2,var.equal=F)
+```
+pval=2.349e-06 <0.05, on  rejette l'hypothese les echantillons sont de moyennes differentes
+
+```{r}
+#estime n pas assez grand
+wilcox.test(Gender_inequalities1,Gender_inequalities2)
+```
+pval=4.9e-07 <0.05, on rejette l'hypothese les echantillons sont de moyennes differentes
+
+
+## Etude de la variable Proportion_denfants_harceles
+```{r}
+Proportion_of_bullied_children1=data1$Proportion_of_bullied_children
+Proportion_of_bullied_children2=data2$Proportion_of_bullied_children
+print("PAYS DEMOCRATIQUES")
+summary(Proportion_of_bullied_children1)
+print("variance =") ; print(var(Proportion_of_bullied_children1,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Proportion_of_bullied_children1,na.rm=TRUE))
+print("-----------------------------------")
+print("PAYS NON DEMOCRATIQUES")
+summary(Proportion_of_bullied_children2)
+print("variance =") ; print(var(Proportion_of_bullied_children2,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Proportion_of_bullied_children2,na.rm=TRUE))
+print("-----------------------------------")
+print("MONDE")
+summary(data3$Proportion_of_bullied_children)
+print("variance =") ; print(var(data3$Proportion_of_bullied_children,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(data3$Proportion_of_bullied_children,na.rm=TRUE))
+```
+
+```{r}
+par(mfrow=c(1,3))
+hist(Proportion_of_bullied_children1,freq =TRUE, main = "Proportion_of_bullied_children pays démocratiques",xlab = "Proportion_of_bullied_children",ylab = "effectifs")
+hist(Proportion_of_bullied_children2,freq =TRUE, main = "Proportion_of_bullied_children pays non démocratiques",xlab = "Proportion_of_bullied_children",ylab = "effectifs")
+hist(data3$Proportion_of_bullied_children,freq =TRUE, main = "Proportion_of_bullied_children monde",xlab = "Proportion_of_bullied_children",ylab = "effectifs")
+```
+
+```{r}
+boxplot(Proportion_of_bullied_children1,Proportion_of_bullied_children2,main="Proportion_of_bullied_children")
+```
+
+La médiane est très proche entre les deux régimes. L'étendue pour les régimes démocratiques est très importante.
+
+
+
+```{r}
+p1 = ggplot(data.frame(y=Proportion_of_bullied_children1), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Proportion_of_bullied_children1")
+p2 = ggplot(data.frame(y=Proportion_of_bullied_children2), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Proportion_of_bullied_children2")
+grid.arrange(p1,p2,ncol=2)
+```
+
+
+
+```{r}
+shapiro.test(Proportion_of_bullied_children1)
+shapiro.test(Proportion_of_bullied_children2)
+```
+
+Les échantillons ne suivent pas tous les deux une loi normale
+
+On va supposer que les deux échantillons ne suivent pas une loi normale
+
+
+```{r}
+#test de comparaison des variances
+ansari.test(Proportion_of_bullied_children1,Proportion_of_bullied_children2)
+```
+
+Les échantillons ont des variances identiques
+
+```{r}
+#test de comparaison des moyennes
+#estime n grand
+t.test(Proportion_of_bullied_children1,Proportion_of_bullied_children2,var.equal=F)
+```
+pval=0.1481>0.05, on accepte l'hypothese les echantillons sont de moyennes identiques
+
+```{r}
+#test de comparaison des variances
+#estime n pas assez grand
+wilcox.test(Proportion_of_bullied_children1,Proportion_of_bullied_children2)
+```
+pval=0.06437 > 0.05, on accpete l'hypothese les echantillons sont de moyennes identiques.
+
+
+
+
+## Etude de la variable Corruption
+
+
+```{r}
+Corruption1=data1$Corruption
+Corruption2=data2$Corruption
+print("PAYS DEMOCRATIQUES")
+summary(Corruption1)
+print("variance =") ; print(var(Corruption1,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Corruption1,na.rm=TRUE))
+print("-----------------------------------")
+print("PAYS NON DEMOCRATIQUES")
+summary(Corruption2)
+print("variance =") ; print(var(Corruption2,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Corruption2,na.rm=TRUE))
+print("-----------------------------------")
+print("MONDE")
+summary(data3$Corruption)
+print("variance =") ; print(var(data3$Corruption,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(data3$Corruption,na.rm=TRUE))
+```
+
+```{r}
+par(mfrow=c(1,3))
+hist(Corruption1,freq =TRUE, main = "Corruption pays démocratiques",xlab = "Corruption",ylab = "effectifs")
+hist(Corruption2,freq =TRUE, main = "Corruption pays non démocratiques",xlab = "Corruption",ylab = "effectifs")
+hist(data3$Corruption,freq =TRUE, main = "Corruption monde",xlab = "Corruption",ylab = "effectifs")
+```
+
+```{r}
+boxplot(Corruption1,Corruption2,main="Corruption")
+```
+Il y a une grande indépendance entre la corruption dans les démocraties et les régimes autoritaires. L'indices de corruption est très élevé en générales pour les démocraties ce qui est vraiment bon.
+
+
+```{r}
+p1 = ggplot(data.frame(y=Corruption1), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Corruption1")
+p2 = ggplot(data.frame(y=Corruption2), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Corruption2")
+grid.arrange(p1,p2,ncol=2)
+```
+
+
+
+```{r}
+shapiro.test(Corruption1)
+
+shapiro.test(Corruption2)
+```
+Les échantillons ne suivent pas tous les deux une loi normale
+
+On va supposer que les deux échantillons ne suivent pas une loi normale
+
+```{r}
+#test de comparaison des variances
+ansari.test(Corruption1,Corruption2)
+```
+On accepte l'hypothèse d'égalité des variances.
+
+
+```{r}
+#test de comparaison des moyennes
+#estime n grand
+t.test(Corruption1,Corruption2,var.equal=F)
+```
+pval=2.553e-09<0.05, on rejette l'hypothese les echantillons sont de moyennes différents
+
+```{r}
+#test de comparaison des variances
+#estime n pas assez grand
+wilcox.test(Corruption1,Corruption2)
+```
+pval=5.429e-08<0.05, on rejette l'hypothese les echantillons sont de moyennes différents
+
+## Etude de la variable Taux_alphabetisation
+ 
+
+```{r}
+Literacy_rate1=data1$Literacy_rate
+Literacy_rate2=data2$Literacy_rate
+print("PAYS DEMOCRATIQUES")
+summary(Literacy_rate1)
+print("variance =") ; print(var(Literacy_rate1,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Literacy_rate1,na.rm=TRUE))
+print("-----------------------------------")
+print("PAYS NON DEMOCRATIQUES")
+summary(Literacy_rate2)
+print("variance =") ; print(var(Literacy_rate2,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Literacy_rate2,na.rm=TRUE))
+print("-----------------------------------")
+print("MONDE")
+summary(data3$Literacy_rate)
+print("variance =") ; print(var(data3$Literacy_rate,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(data3$Literacy_rate,na.rm=TRUE))
+```
+
+```{r}
+par(mfrow=c(1,3))
+hist(Literacy_rate1,freq =TRUE, main = "Literacy_rate pays démocratiques",xlab = "Literacy_rate",ylab = "effectifs")
+hist(Literacy_rate2,freq =TRUE, main = "Literacy_rate pays non démocratiques",xlab = "Literacy_rate",ylab = "effectifs")
+hist(data3$Literacy_rate,freq =TRUE, main = "Literacy_rate monde",xlab = "Literacy_rate",ylab = "effectifs")
+```
+
+```{r}
+boxplot(Literacy_rate1,Literacy_rate2,main="Literacy_rate")
+```
+
+Les médianes pour les deux régimes sont quasi-indentiques soit 98 et 92. En rvanche les 1er quartil est à 95 pour les démocraties et 73 pour les régimes autoritaires. ???
+
+
+```{r}
+p1 = ggplot(data.frame(y=Literacy_rate1), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Literacy_rate1")
+p2 = ggplot(data.frame(y=Literacy_rate2), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Literacy_rate2")
+grid.arrange(p1,p2,ncol=2)
+```
+
+
+
+```{r}
+shapiro.test(Literacy_rate1)
+
+shapiro.test(Literacy_rate2)
+```
+Les échantillons ne suivent pas une loi normale
+
+```{r}
+#test de comparaison des variances
+ansari.test(Literacy_rate1,Literacy_rate2)
+```
+pval =0.44>0.05 donc on accepte l'hypothèse, les variances son égales
+
+
+```{r}
+#test de comparaison des moyennes
+#on estime n assez grand
+t.test(Literacy_rate1,Literacy_rate2,var.equal=F)
+```
+
+```{r}
+#test de comparaison des moyennes
+#si on considere n trop petit
+wilcox.test(Literacy_rate1,Literacy_rate2)
+```
+Dans les deux cas on rejette l'hypothese les moyennes sont différentes.
+
+
+
+
+
+## ETUDE DE Annes_detudes
+
+```{r}
+Mean_years_of_schooling1=data1$Mean_years_of_schooling
+Mean_years_of_schooling2=data2$Mean_years_of_schooling
+print("PAYS DEMOCRATIQUE")
+summary(Mean_years_of_schooling1)
+print("variance =") ; print(var(Mean_years_of_schooling1,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Mean_years_of_schooling1,na.rm=TRUE))
+print("-----------------------------------")
+print("PAYS NON DEMOCRATIQUES")
+summary(Mean_years_of_schooling2)
+print("variance =") ; print(var(Mean_years_of_schooling2,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Mean_years_of_schooling2,na.rm=TRUE))
+print("-----------------------------------")
+print("MONDE")
+summary(data3$Mean_years_of_schooling)
+print("variance =") ; print(var(data3$Mean_years_of_schooling,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(data3$Mean_years_of_schooling,na.rm=TRUE))
+```
+
+```{r}
+par(mfrow=c(1,3))
+hist(Mean_years_of_schooling1,freq =TRUE, main = "Mean_years_of_schooling pays démocratiques",xlab = "Mean_years_of_schooling",ylab = "effectifs")
+hist(Mean_years_of_schooling2,freq =TRUE, main = "Mean_years_of_schooling pays non démocratiques",xlab = "Mean_years_of_schooling",ylab = "effectifs")
+hist(data3$Mean_years_of_schooling,freq =TRUE, main = "Mean_years_of_schooling",xlab = "Mean_years_of_schooling",ylab = "effectifs")
+```
+
+```{r}
+boxplot(Mean_years_of_schooling1,Mean_years_of_schooling2,main="Mean_years_of_schooling")
+```
+
+Des médianes assez proches mais des dispersions très différentes
+
+
+```{r}
+p1 = ggplot(data.frame(y=Mean_years_of_schooling1), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Mean_years_of_schooling1")
+p2 = ggplot(data.frame(y=Mean_years_of_schooling2), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Mean_years_of_schooling2")
+grid.arrange(p1,p2,ncol=2)
+```
+
+
+
+```{r}
+shapiro.test(Mean_years_of_schooling1)
+
+shapiro.test(Mean_years_of_schooling2)
+```
+
+Les échantillons ne suivent pas tous les deux une loi normale
+
+
+On va supposer que les deux échantillons ne suivent pas une loi normale
+
+```{r}
+#test de comparaison des variances
+ansari.test(Mean_years_of_schooling1,Mean_years_of_schooling2)
+```
+p val =0.5 > 0.05 on accepte l'hypothèse de varinaces égales
+
+```{r}
+#test de comparaison des moyennes
+#estime n grand
+t.test(Mean_years_of_schooling1,Mean_years_of_schooling2,var.equal=F)
+```
+pval=5.016e-07 < 0.05, on rejette l'hypothese les echantillons sont de moyennes différents
+
+```{r}
+#test de comparaison des variances
+#estime n pas assez grand
+wilcox.test(Mean_years_of_schooling1,Mean_years_of_schooling2)
+```
+pval=1.838e-07<0.05, on rejette l'hypothese les echantillons sont de moyennes différents
+
+
+
+
+
+## Etude de la variable Espérance_vie
+
+```{r}
+Life_expectancy1=data1$Life_expectancy
+Life_expectancy2=data2$Life_expectancy
+print("PAYS DEMOCRATIQUE")
+summary(Life_expectancy1)
+print("variance =") ; print(var(Life_expectancy1,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Life_expectancy1,na.rm=TRUE))
+print("-----------------------------------")
+print("PAYS NON DEMOCRATIQUES")
+summary(Life_expectancy2)
+print("variance =") ; print(var(Life_expectancy2,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Life_expectancy2,na.rm=TRUE))
+print("-----------------------------------")
+print("MONDE")
+summary(data3$Life_expectancy)
+print("variance =") ; print(var(data3$Life_expectancy,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(data3$Life_expectancy,na.rm=TRUE))
+```
+
+```{r}
+boxplot(Life_expectancy1,Life_expectancy2,main="Life_expectancy")
+```
+
+Il y 8 ans d'écart entre les deux types de régimes. Une très faible dispersion pour les démocraties soit 0.3
+
+
+
+```{r}
+p1 = ggplot(data.frame(y=Life_expectancy1), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Life_expectancy1")
+p2 = ggplot(data.frame(y=Life_expectancy2), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Life_expectancy2")
+grid.arrange(p1,p2,ncol=2)
+```
+
+
+
+```{r}
+shapiro.test(Life_expectancy1)
+shapiro.test(Life_expectancy2)
+```
+
+Les échantillons ne suivent pas tous les deux une loi normale
+
+
+
+On va supposer que les deux échantillons ne suivent pas une loi normale
+
+```{r}
+#test de comparaison des variances
+ansari.test(Life_expectancy1,Life_expectancy2)
+```
+
+p val = 0.18 > 0.05 donc on accepte l'hypothèse de variances égales
+
+
+```{r}
+#test de comparaison des moyennes
+#estime n grand
+t.test(Life_expectancy1,Life_expectancy2,var.equal=F)
+```
+pval=1.003e-05 < 0.05, on rejette l'hypothese les echantillons sont de moyennes différents
+
+```{r}
+#test de comparaison des moyennes
+#estime n pas assez grand
+wilcox.test(Life_expectancy1,Life_expectancy2)
+```
+pval=1.568e-08<0.05, on rejette l'hypothese les echantillons sont de moyennes différents
+
+
+
+
+
+
+## ETUDE DE Budget_militaire_%GPD
+
+
+```{r}
+Military_expenditure_as_share_of_GDP1=data1$Military_expenditure_as_share_of_GDP
+Military_expenditure_as_share_of_GDP2=data2$Military_expenditure_as_share_of_GDP
+print("PAYS DEMOCRATIQUE")
+summary(Military_expenditure_as_share_of_GDP1)
+print("variance =") ; print(var(Military_expenditure_as_share_of_GDP1,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Military_expenditure_as_share_of_GDP1,na.rm=TRUE))
+print("-----------------------------------")
+print("PAYS NON DEMOCRATIQUES")
+summary(Military_expenditure_as_share_of_GDP2)
+print("variance =") ; print(var(Military_expenditure_as_share_of_GDP2,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Military_expenditure_as_share_of_GDP2,na.rm=TRUE))
+print("-----------------------------------")
+print("MONDE")
+summary(data3$Military_expenditure_as_share_of_GDP)
+print("variance =") ; print(var(data3$Military_expenditure_as_share_of_GDP,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(data3$Military_expenditure_as_share_of_GDP,na.rm=TRUE))
+```
+
+```{r}
+boxplot(Military_expenditure_as_share_of_GDP1,Military_expenditure_as_share_of_GDP2,main="Military_expenditure_as_share_of_GDP")
+```
+Beaucoup plus de dispersion pour les pays non démocratiques et moyenne bien plus haute.
+Il y a deux outliers dans les deux régimes.
+
+
+```{r}
+p1 = ggplot(data.frame(y=Military_expenditure_as_share_of_GDP1), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Military_expenditure_as_share_of_GDP1")
+p2 = ggplot(data.frame(y=Military_expenditure_as_share_of_GDP2), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Military_expenditure_as_share_of_GDP2")
+grid.arrange(p1,p2,ncol=2)
+```
+
+
+
+```{r}
+shapiro.test(Military_expenditure_as_share_of_GDP1)
+shapiro.test(Military_expenditure_as_share_of_GDP2)
+```
+
+
+Les échantillons ne suivent pas une loi normale
+
+```{r}
+#test de comparaison des variances
+ansari.test(Military_expenditure_as_share_of_GDP1,Military_expenditure_as_share_of_GDP2)
+```
+p val =0.43 > 0.05 on accepte l'hypothèse de varinaces égales
+
+
+```{r}
+#test de comparaison des moyennes
+#estime echantllon assez grand
+t.test(Military_expenditure_as_share_of_GDP1,Military_expenditure_as_share_of_GDP2,var.equal=F)
+```
+
+```{r}
+#test de comparaison des moyennes
+wilcox.test(Military_expenditure_as_share_of_GDP1,Military_expenditure_as_share_of_GDP2)
+```
+
+on rejette l'hypothese les moyennes sont différentes.
+
+
+
+
+## Etude de Sous_alimentation
+```{r}
+Undernourishment1=data1$Undernourishment
+Undernourishment2=data2$Undernourishment
+print("PAYS DEMOCRATIQUE")
+summary(Undernourishment1)
+print("variance =") ; print(var(Undernourishment1,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Undernourishment1,na.rm=TRUE))
+print("-----------------------------------")
+print("PAYS NON DEMOCRATIQUES")
+summary(Undernourishment2)
+print("variance =") ; print(var(Undernourishment2,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Undernourishment2,na.rm=TRUE))
+print("-----------------------------------")
+print("MONDE")
+summary(data3$Undernourishment)
+print("variance =") ; print(var(data3$Undernourishment,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(data3$Undernourishment,na.rm=TRUE))
+```
+
+```{r}
+boxplot(Undernourishment1,Undernourishment2,main="Undernourishment")
+```
+ Toutes les démocraties ont un pourcentage de sous alimentation de 2.5, la premier et le troisième quartile étant à 2.5
+ 
+ 
+
+```{r}
+p1 = ggplot(data.frame(y=Undernourishment1), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Undernourishment1")
+p2 = ggplot(data.frame(y=Undernourishment2), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Undernourishment2")
+grid.arrange(p1,p2,ncol=2)
+```
+
+
+
+```{r}
+shapiro.test(Undernourishment1)
+shapiro.test(Undernourishment2)
+```
+
+Les échantillons ne suivent pas une loi normale
+
+```{r}
+#test de comparaison des variances
+var.test(Undernourishment1,Undernourishment2)
+```
+on rejette, les échantillons n'ont pas la même variance
+
+
+```{r}
+#test de comparaison des moyennes
+wilcox.test(Undernourishment1,Undernourishment2)
+```
+
+pval=9.538e-06 donc on rejette l'hypothese les moyennes sont différentes.
+
+
+## ETUDE DE LA VARIABLE Acces_Internet_pers
+
+
+```{r}
+Proportion_of_individuals_using_the_internet1=data1$Proportion_of_individuals_using_the_internet
+Proportion_of_individuals_using_the_internet2=data2$Proportion_of_individuals_using_the_internet
+print("PAYS DEMOCRATIQUE")
+summary(Proportion_of_individuals_using_the_internet1)
+print("variance =") ; print(var(Proportion_of_individuals_using_the_internet1,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Proportion_of_individuals_using_the_internet1,na.rm=TRUE))
+print("-----------------------------------")
+print("PAYS NON DEMOCRATIQUES")
+summary(Proportion_of_individuals_using_the_internet2)
+print("variance =") ; print(var(Proportion_of_individuals_using_the_internet2,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Proportion_of_individuals_using_the_internet2,na.rm=TRUE))
+print("-----------------------------------")
+print("MONDE")
+summary(data3$Proportion_of_individuals_using_the_internet)
+print("variance =") ; print(var(data3$Proportion_of_individuals_using_the_internet,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(data3$Proportion_of_individuals_using_the_internet,na.rm=TRUE))
+```
+
+```{r}
+boxplot(Proportion_of_individuals_using_the_internet1,Proportion_of_individuals_using_the_internet2,main="Proportion_of_individuals_using_the_internet")
+```
+
+Faible dispersion pour les pays démocratiques autour de 87.47 avec seulement deux outliers.En revanche très grande dispersion pour les autocraties, on ne peut rien en déduire.
+
+
+```{r}
+p1 = ggplot(data.frame(y=Proportion_of_individuals_using_the_internet1), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Proportion_of_individuals_using_the_internet1")
+p2 = ggplot(data.frame(y=Proportion_of_individuals_using_the_internet2), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Proportion_of_individuals_using_the_internet2")
+grid.arrange(p1,p2,ncol=2)
+```
+
+
+
+```{r}
+shapiro.test(Proportion_of_individuals_using_the_internet1)
+shapiro.test(Proportion_of_individuals_using_the_internet2)
+```
+
+Les échantillons ne suivent pas tous les deux une loi normale
+
+
+On va supposer que les deux échantillons ne suivent pas une loi normale
+
+```{r}
+#test de comparaison des variances
+ansari.test(Proportion_of_individuals_using_the_internet1,Proportion_of_individuals_using_the_internet2)
+```
+p val =0.0004<0.05 on rejette l'hypothèse de variances différentes
+
+```{r}
+#test de comparaison des moyennes
+#estime n grand
+t.test(Proportion_of_individuals_using_the_internet1,Proportion_of_individuals_using_the_internet2,var.equal=F)
+```
+pval= 6.353e-05 < 0.05, on rejette l'hypothese les echantillons sont de moyennes différents
+
+```{r}
+#test de comparaison des moyennes
+#estime n pas assez grand
+wilcox.test(Proportion_of_individuals_using_the_internet1,Proportion_of_individuals_using_the_internet2)
+```
+pval= 0.000194 < 0.05, on rejette l'hypothese les echantillons sont de moyennes différents
+
+
+
+
+## Etude de la variable Acces_electricite_pers
+
+```{r}
+Proportion_of_the_population_with_access_to_electricity1=data1$Proportion_of_the_population_with_access_to_electricity
+Proportion_of_the_population_with_access_to_electricity2=data2$Proportion_of_the_population_with_access_to_electricity
+print("PAYS DEMOCRATIQUE")
+summary(Proportion_of_the_population_with_access_to_electricity1)
+print("variance =") ; print(var(Proportion_of_the_population_with_access_to_electricity1,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Proportion_of_the_population_with_access_to_electricity1,na.rm=TRUE))
+print("-----------------------------------")
+print("PAYS NON DEMOCRATIQUES")
+summary(Proportion_of_the_population_with_access_to_electricity2)
+print("variance =") ; print(var(Proportion_of_the_population_with_access_to_electricity2,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Proportion_of_the_population_with_access_to_electricity2,na.rm=TRUE))
+print("-----------------------------------")
+print("MONDE")
+summary(data3$Proportion_of_the_population_with_access_to_electricity)
+print("variance =") ; print(var(data3$Proportion_of_the_population_with_access_to_electricity,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(data3$Proportion_of_the_population_with_access_to_electricity,na.rm=TRUE))
+```
+
+```{r}
+boxplot(Proportion_of_the_population_with_access_to_electricity1,Proportion_of_the_population_with_access_to_electricity2,main="Proportion_of_the_population_with_access_to_electricity")
+```
+99% des pays démocratiques ont accès à internet. En revanche dans les autocratie il y autant de pays qui ont entre 99% et 100% et entre 99% et 61%, avec un min à 6.7%
+
+
+
+
+```{r}
+p1 = ggplot(data.frame(y=Proportion_of_the_population_with_access_to_electricity1), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Proportion_of_the_population_with_access_to_electricity1")
+p2 = ggplot(data.frame(y=Proportion_of_the_population_with_access_to_electricity2), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Proportion_of_the_population_with_access_to_electricity2")
+grid.arrange(p1,p2,ncol=2)
+```
+
+
+
+```{r}
+shapiro.test(Proportion_of_the_population_with_access_to_electricity1)
+shapiro.test(Proportion_of_the_population_with_access_to_electricity2)
+```
+Les échantillons ne suivent pas une loi normale
+```{r}
+#test de comparaison des variances
+ansari.test(Proportion_of_the_population_with_access_to_electricity1,Proportion_of_the_population_with_access_to_electricity2)
+```
+p val =3.9e-5 > 0.05 on rejette l'hypothèse de varinaces différentes
+
+```{r}
+wilcox.test(Proportion_of_the_population_with_access_to_electricity1,Proportion_of_the_population_with_access_to_electricity2)
+```
+
+pval=3.295e-05 donc on rejette l'hypothese les moyennes sont différentes.
+
+
+
+## ETUDE DE Pop_urban
+```{r}
+Urban_population1=data1$Urban_population
+Urban_population2=data2$Urban_population
+print("PAYS DEMOCRATIQUE")
+summary(Urban_population1)
+print("variance =") ; print(var(Urban_population1,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Urban_population1,na.rm=TRUE))
+print("-----------------------------------")
+print("PAYS NON DEMOCRATIQUES")
+summary(Urban_population2)
+print("variance =") ; print(var(Urban_population2,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Urban_population2,na.rm=TRUE))
+print("-----------------------------------")
+print("MONDE")
+summary(data3$Urban_population)
+print("variance =") ; print(var(data3$Urban_population,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(data3$Urban_population,na.rm=TRUE))
+```
+
+```{r}
+boxplot(Urban_population1,Urban_population2,main="Pop_urban")
+```
+Aucune différence marquante
+
+
+```{r}
+p1 = ggplot(data.frame(y=Urban_population1), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Urban_population1")
+p2 = ggplot(data.frame(y=Urban_population2), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Urban_population2")
+grid.arrange(p1,p2,ncol=2)
+```
+
+
+
+```{r}
+shapiro.test(Urban_population1)
+shapiro.test(Urban_population2)
+```
+
+Les échantillons ne suivent pas une loi normale
+
+```{r}
+#test de comparaison des variances
+ansari.test(Urban_population1,Urban_population2)
+```
+p val =0.0.7 > 0.05 on accepte l'hypothèse de varinaces égales
+
+```{r}
+#test de comparaison des moyennes
+wilcox.test(Urban_population1,Urban_population2)
+```
+
+pval=0.99 donc on accepte l'hypothese les moyennes sont identiques
+
+
+
+## ETUDE DE Pop_rural
+
+
+```{r}
+Rural_population1=data1$Rural_population
+Rural_population2=data2$Rural_population
+print("PAYS DEMOCRATIQUE")
+summary(Rural_population1)
+print("variance =") ; print(var(Rural_population1,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Rural_population1,na.rm=TRUE))
+print("-----------------------------------")
+print("PAYS NON DEMOCRATIQUES")
+summary(Rural_population2)
+print("variance =") ; print(var(Rural_population2,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(Rural_population2,na.rm=TRUE))
+print("-----------------------------------")
+print("MONDE")
+summary(data3$Rural_population)
+print("variance =") ; print(var(data3$Rural_population,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(data3$Rural_population,na.rm=TRUE))
+```
+
+```{r}
+boxplot(Rural_population1,Rural_population2,main="Rural_population")
+```
+
+Aucune différence marquante
+
+```{r}
+p1 = ggplot(data.frame(y=Rural_population1), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Rural_population1")
+p2 = ggplot(data.frame(y=Rural_population2), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("Rural_population2")
+grid.arrange(p1,p2,ncol=2)
+```
+
+
+
+```{r}
+shapiro.test(Rural_population1)
+shapiro.test(Rural_population2)
+```
+
+Les échantillons ne suivent pas une loi normale
+```{r}
+#test de comparaison des variances
+ansari.test(Rural_population1,Rural_population2)
+```
+p val =0.58 > 0.05 on accepte l'hypothèse de varinaces égales
+
+
+```{r}
+#test de comparaison des moyennes
+wilcox.test(Rural_population1,Rural_population2)
+```
+p val =0.13 on accepte l'hypothese, les moyennes sont identiques.
+
+
+ansari test : H0 : les échantillons diffèrent pas la variance et d'autres paramètres
+              H1 : les échantillons ne diffèrent que par la variance
+
+____________________________
+
+
+Conclusion : 
+Nous pouvons remarquer que globalement, les pays démocratiques semblent avoir des variances et des dispersions plus faibles pour les variables considérées par rapport aux pays démocratiques. Cependant, avec cette étude il semble difficile de dire que les pays démocratiques sont tous "identiques".
+
+
+Il semblerait que les pays démocratiques soient plus ou moins similaires pour les critères :
+- Droit de l'homme avec un indice positif
+- Liberté économique avec une faible dispersion avec 3/4 des valeurs entre 7.4 et 7.5
+- Inégalité des genres avec 3/4 des valeurs entre 0.06 et 0.13
+- Corruption : 1er quartil à 71 donc 3/4 des valeurs au dessus de 71 tandis que dans les régimes autoritaires3/4 des valeurs sont en dessous de 48
+- Taux alphabétique avec 3/4 des valeurs entre 97 et 99
+- HDI avec 3/4 des valeurs entre 0.87 et 0.93
+- Espérence de vie avec 3/4 des valeurs entre 81 et 83 ans
+- Budget militaire avec 3/4 des valeurs entre 0.9 et 1.8 (et avec le 1er quartile des régimes autoritaires à 1.8)
+- alimentation tous à 2.5 sauf les quelques outliers
+
+Mais ce n'est pas le cas pour les critères comme :
+- Electricité carla dispersion est faible mais trop proche des régimes autoritaires.
+- Pour les enfants ont à une moyenne et 50% des données très proches des autocraties
+
+
+
+Quant aux pays non démocratiques, il y a  très peu de critères qui resssortent (age démocratie tous à 0, droit de l'homme entièrement négatif, corruption avec 3/4 des valeurs en dessous de 48 et un budget militaire avec 50% des valeurs entre 1.8 et 4.1)
+Il ne semblerait pas qu'on puisse conclure qu'ils sont tous identiques puisque nous avons aussi des dispersions globalement importantes pour la majorité des variables.
+
+On pourrait donc dire qu'il y a plusieurs "façons" d'être démocratique (même si la richesse du pays semble un critère important) et plusieurs façons de ne pas l'être. 
+
+
+
+
+## Etude de la variable HDI
+
+```{r}
+HDI1=data1$HDI
+HDI2=data2$HDI
+print("PAYS DEMOCRATIQUES")
+summary(HDI1)
+print("variance =") ; print(var(HDI1,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(HDI1,na.rm=TRUE))
+print("-----------------------------------")
+print("PAYS NON DEMOCRATIQUES")
+summary(HDI2)
+print("variance =") ; print(var(HDI2,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(HDI2,na.rm=TRUE))
+print("-----------------------------------")
+print("MONDE")
+summary(data3$HDI)
+print("variance =") ; print(var(data3$HDI,use="pairwise.complete.obs")) ; print("ecart type = "); print(sd(data3$HDI,na.rm=TRUE))
+```
+
+```{r}
+par(mfrow=c(1,3))
+hist(HDI1,freq =TRUE, main = "HDI pays démocratiques",xlab = "HDI",ylab = "effectifs")
+hist(HDI2,freq =TRUE, main = "HDI pays non démocratiques",xlab = "HDI",ylab = "effectifs")
+hist(data3$HDI,freq =TRUE, main = "HDI monde",xlab = "HDI",ylab = "effectifs")
+```
+
+```{r}
+boxplot(HDI1,HDI2,main="HDI")
+```
+
+Les moyennes sont très différentes 0.89 pour démo et 0.67 pour auto avec une dispersion très importante pour les régimes auto soit 0.3 contre 0.06. Par contre on remarque un outlier pour les démocraties
+
+
+```{r}
+p1 = ggplot(data.frame(y=HDI1), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("HDI1")
+p2 = ggplot(data.frame(y=HDI2), aes(sample=y))+
+  stat_qq() + 
+  stat_qq_line(col="blue")+
+  ggtitle("HDI2")
+grid.arrange(p1,p2,ncol=2)
+```
+
+
+
+```{r}
+shapiro.test(HDI1)
+
+shapiro.test(HDI2)
+```
+Les échantillons ne suivent pas tous les deux une loi normale
+
+On va supposer que les deux échantillons ne suivent pas une loi normale
+
+```{r}
+#test de comparaison des variances
+ansari.test(HDI1,HDI2)
+```
+p val =0.19 >0.05 donc les variances sont égales
+
+
+```{r}
+#test de comparaison des moyennes
+#estime n grand
+t.test(HDI1,HDI2,var.equal=F)
+```
+pval=8.543e-06 < 0.05, on rejette l'hypothese les echantillons sont de moyennes différents
+
+```{r}
+#test de comparaison des moyennes
+#estime n pas assez grand
+wilcox.test(HDI1,HDI2)
+```
+pval=5.003e-07<0.05, on rejette l'hypothese les echantillons sont de moyennes différents
+

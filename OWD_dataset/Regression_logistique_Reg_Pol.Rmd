@@ -1,0 +1,242 @@
+---
+title: "Modele Regression logistique Reg Pol"
+output: html_document
+---
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(corrplot)
+library(readxl)
+library(FactoMineR)
+library(factoextra)
+library(cowplot)
+library("NbClust")
+library(missForest)
+
+
+library(MASS)
+library(leaps)
+library(bestglm)
+library(ggfortify)
+library(gridExtra)
+```
+
+
+
+```{r}
+data3=read.csv("data3-modif.csv",header=TRUE,sep=";",dec=",")
+rownames(data3)<-data3$Entity
+data3=data3[,-1]
+data3=data3[,-8]
+print(data3)
+```
+
+On supprime les pays dont nous n'avons pas l'indice Regime politique
+
+
+```{r}
+data3 =data3 %>% filter(!is.na(Political_Regime))
+print(data3)
+``` 
+
+
+
+```{r}
+#On fait un missing tree pour compléter les données manquantes et pas être embétés ensuite
+
+data3=missForest(data3)$ximp #on fait un miss forest pour compléter les données manquantes et ne pas avoir de problèmes de NA dans la suite de l'analyse.
+```
+
+
+
+
+
+# Regression logistique partie 1
+On va rassembler les pays dont le Regime politique est 0 et 1 et ceux dont l'indice est 2 et 3
+
+
+closed autocracies (score 0), electoral autocracies (score 1), electoral democracies (score 2), and liberal democracies (score 3)
+In closed autocracies, citizens do not have the right to either choose the chief executive of the government or the legislature through multi-party elections.
+
+In electoral autocracies, citizens have the right to choose the chief executive and the legislature through multi-party elections; but they lack some freedoms, such as the freedoms of association or expression, that make the elections meaningful, free, and fair.
+
+In electoral democracies, citizens have the right to participate in meaningful, free and fair, and multi-party elections.
+
+In liberal democracies, citizens have further individual and minority rights, are equal before the law, and the actions of the executive are constrained by the legislative and the courts.
+
+#Rassemblement 0 et 1 en 0 et 2 et 3 en 1 dans la variable Regime Pol 2
+```{r}
+data3$Political_Regime2 <- 0 # autocratie
+data3$Political_Regime2[data3$Political_Regime == 2] <- 1
+data3$Political_Regime2[data3$Political_Regime == 3] <- 1
+head(data3)
+``` 
+
+
+```{r}
+glm.Political_Regime2= glm(Political_Regime2 ~ .-Political_Regime, data=data3, family=binomial(link="logit"))
+summary(glm.Political_Regime2)
+```
+
+le pseudo $R^2$ associé à ce modèle et commentez.
+
+```{r}
+pseudoR2 = (glm.Political_Regime2$null.deviance - glm.Political_Regime2$deviance)/glm.Political_Regime2$null.deviance
+pseudoR2
+```
+
+pseudoR²=0.47 c'est moyen
+
+Le modele constant est-il envisageable ?
+
+```{r}
+M0 = glm(Political_Regime2 ~ 1, data=data3, family=binomial(link="logit"))
+summary(M0)
+anova(M0,glm.Political_Regime2,test="Chisq")
+```
+Avec Anova : p-valeur <2.2e-16 <0.05 donc on rejette Ho c'est à dire que le modele constant n'est pas adapté.
+
+
+```{r}
+exp(glm.Political_Regime2$coefficients)
+```
+1.8=exp(teta1)ôbs=OR(x+1,x)
+où x est une valeur de Droit de l'Homme, donc si la variable Droit de l'Homme augmente de 1 on a 1.8 fois plus de chance d'avoir du une democratie.
+
+
+
+# Sélection de variables :
+#Critère AIC
+```{r}
+step(glm.Political_Regime2,trace=TRUE,direction=c("backward"))
+
+```
+sous modele retenu :
+Regime_politique2 ~ Droit_de_lHomme + Corruption + Budget_militaire_from_GPD + Sous_alimentation + InternetPop_urban + Pop_rural
+
+```{r}
+modselect_AIC = glm(Political_Regime2 ~ Human_Rights + Corruption + 
+    Military_expenditure_as_share_of_GDP + Undernourishment + 
+    Proportion_of_individuals_using_the_internet + Urban_population + 
+    Rural_population, data=data3, family = binomial(link="logit"))
+```
+
+```{r}
+anova(modselect_AIC,glm.Political_Regime2,test="Chisq")
+``` 
+p-val =0.89 > 0.05 donc on accepte l'hypothese cad que le sous modele est accepté
+
+#Critère BIC
+```{r}
+step(glm.Political_Regime2, trace=FALSE,direction="backward", k=log(nrow(data3)))
+
+```
+
+On garde les variables droit de l'Homme, corruption, budget militaire , pop rural et pop urban (même que AIC moins sous alimentation et internet) pour exprimer le régime politique (2)
+
+````{r}
+modselect_BIC=glm(Political_Regime2 ~ Human_Rights + Corruption + 
+    Military_expenditure_as_share_of_GDP + Urban_population + 
+    Rural_population, family = binomial(link = "logit"),  data = data3)
+
+
+anova(modselect_BIC,glm.Political_Regime2,test="Chisq")
+```
+pval=0.56 on accepte le sous modele
+
+
+# Regression logistique partie 2
+Dans cette étude on ne conserve que les pays donc le regime politique est 0 et 3 pour étudier les extrême.
+On va laisser les indices 0 et remplacer 3 par 1 pour pouvoir faire un travail en regression logistique.
+
+#supression de regime politique 2 
+
+```{r}
+head(data3)
+
+```
+
+```{r}
+data3bis=data3[-16]
+head(data3bis)
+```
+
+#Rassemblement transformation de 3 en 1 en la variable Regime Pol 3
+```{r}
+#garder seulement 0 et 3
+data3bis=subset(data3bis, Political_Regime==0 | Political_Regime==3)
+head(data3bis)
+```
+
+```{r}
+#creation de la nouvelle variable
+data3bis$Political_Regime3 <- 0 # autocratie
+data3bis$Political_Regime3[data3bis$Political_Regime == 3] <- 1
+data3bis=transform(data3bis,Political_Regime3 =as.factor(Political_Regime3))
+print(data3bis)
+```
+
+
+```{r}
+glm.Political_Regime3= glm(Political_Regime3 ~ .-Political_Regime, data=data3bis, family=binomial(link="logit"),control=list(maxit=100,epsilon=1))
+summary(glm.Political_Regime3)
+```
+
+le pseudo $R^2$ associé à ce modèle et commentez.
+
+```{r}
+pseudoR2 = (glm.Political_Regime3$null.deviance - glm.Political_Regime3$deviance)/glm.Political_Regime3$null.deviance
+pseudoR2
+```
+$R^2$=0.7 c'est plutôt bon
+
+Le modele constant est-il envisageable ?
+
+```{r}
+ModConst = glm(Political_Regime3 ~ 1, data=data3bis, family=binomial(link="logit"))
+summary(ModConst)
+anova(ModConst,glm.Political_Regime3,test="Chisq")
+```
+p val =1.868e-06 <0.05 donc on rejette H0 le modele n'est pas constant
+
+```{r}
+exp(glm.Political_Regime3$coefficients)
+```
+
+# Sélection de variables :
+#Critère AIC
+```{r}
+step(glm.Political_Regime3,trace=FALSE,direction=c("backward"))
+
+```
+sous modele retenu :
+Political_Regime3 ~ Gender_inequalities + Military_expenditure_as_share_of_GDP + 
+    Urban_population + Rural_population
+```{r}
+modselect_AIC3 = glm(formula =Political_Regime3 ~ Gender_inequalities + Military_expenditure_as_share_of_GDP + 
+    Urban_population + Rural_population, family = binomial(link = "logit"), data = data3bis, control = list(maxit = 100, epsilon = 1))
+```
+
+```{r}
+anova(modselect_AIC3,glm.Political_Regime3,test="Chisq")
+``` 
+p-val =0.91 > 0.05 donc on accepte l'hypothese cad que le sous modele est accepté
+
+#Critère BIC
+```{r}
+step(glm.Political_Regime3, trace=FALSE,direction="backward", k=log(nrow(data3bis)))
+
+```
+
+On garde les variables Political_Regime3 ~ Gender_inequalities + Military_expenditure_as_share_of_GDP pour exprimer le régime politique (2)
+
+````{r}
+modselect_BIC3=glm(formula = Political_Regime3 ~ Gender_inequalities + Military_expenditure_as_share_of_GDP, family = binomial(link = "logit"), data = data3bis, control = list(maxit = 100, epsilon = 1))
+
+
+anova(modselect_BIC3,glm.Political_Regime3,test="Chisq")
+```
+pval=0.91 on accepte le sous modele
+
