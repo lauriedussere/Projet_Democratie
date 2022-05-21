@@ -26,8 +26,8 @@ In order to find the best variables to define a democracy we used several statis
 - PCA
 - Linear regression
 - Logistic model
-- classification and regression tree
-- random forest
-- comparison test of mean and variance
-- clustering
+- Classification and regression tree
+- Random forest
+- Comparison test of mean and variance
+- Clustering
 
