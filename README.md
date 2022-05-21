@@ -1,4 +1,4 @@
-# Index to evaluate the democracy level of a country
+# Exploring socioeconomical datasets to model the democratic level of countries
 
 Nowadays many countries are considered as democracies but the conditions which define a country to be democratic remain unclear. 
 
