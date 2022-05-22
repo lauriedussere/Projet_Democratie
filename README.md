@@ -2,7 +2,7 @@
 
 Nowadays many countries are considered as democracies but the conditions which define a country to be democratic remain unclear. 
 
-Each year the Economist publishes a ranking of countries according to their democracy level. Each countries has a score which is between 0 and 10 (0 = the country is not a democracy and 10=the country is a perfect democracy). This score is the mean of 5 criterium : 
+Each year the Economist publishes a ranking of countries according to their democracy level. Each countries has a score which is between 0 and 10 (0 = the country is not a democracy and 10=the country is a perfect democracy). This score is the mean of 5 criteria : 
 - Functionning of govenrment
 - Political partipation
 - Political culture
