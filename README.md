@@ -11,7 +11,7 @@ Each year the Economist publishes a ranking of countries according to their demo
 
 The main objective of our project is to identify the variables that are the most relevant to qualify a democracy. 
 
-In this way, we use 3 different datasets :
+In this way, we used 3 different datasets :
 
 - "donnees" corresponds to data of 167 countries from the economist with the variables "Gscore" (which corresponds to the democracy level between 0 and 10) and the five variables quoted above.
 
